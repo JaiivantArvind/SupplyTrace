@@ -1,0 +1,18 @@
+{
+  "name": "supplytrace-subgraph",
+  "version": "1.0.0",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy --studio supplytrace",
+    "create-local": "graph create --node http://localhost:8020/ supplytrace",
+    "remove-local": "graph remove --node http://localhost:8020/ supplytrace",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 supplytrace"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-ts": "^0.35.1"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.98.1"
+  }
+}

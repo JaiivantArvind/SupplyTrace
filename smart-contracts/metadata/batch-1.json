@@ -1,0 +1,21 @@
+{
+  "name": "Batch Alpha — Organic Cotton T-Shirts",
+  "description": "Premium organic cotton t-shirts manufactured in compliance with GOTS standards. This batch underwent full quality inspection before dispatch.",
+  "manufacturer": "GreenThread Industries",
+  "manufacture_date": "2026-02-25",
+  "certifications": [
+    {
+      "type": "GOTS",
+      "document_hash": "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco"
+    },
+    {
+      "type": "ISO 9001",
+      "document_hash": "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG"
+    }
+  ],
+  "origin_coordinates": {
+    "lat": 28.6139,
+    "lng": 77.2090
+  },
+  "image": "ipfs://bafybeibwzifw52ttrkqlikfzext5akxu7lz4xiwjgwzmqcpdzmp3n5vnbe"
+}

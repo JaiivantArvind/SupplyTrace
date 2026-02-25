@@ -1,0 +1,31 @@
+type Batch @entity(immutable: false) {
+  id: ID!                     # tokenId as string
+  tokenId: BigInt!
+  manufacturer: Bytes!
+  metadataURI: String!
+  quantity: BigInt!
+  active: Boolean!
+  state: Int!                 # 0 CREATED | 1 DISTRIBUTED | 2 RETAIL | 3 SOLD | 4 CLOSED
+  custodyCount: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type CustodyTransfer @entity(immutable: true) {
+  id: ID!                     # txHash-logIndex
+  tokenId: BigInt!
+  from: Bytes!
+  to: Bytes!
+  quantity: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  transactionHash: Bytes!
+}
+
+type Recall @entity(immutable: true) {
+  id: ID!                     # txHash-logIndex
+  tokenId: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  transactionHash: Bytes!
+}

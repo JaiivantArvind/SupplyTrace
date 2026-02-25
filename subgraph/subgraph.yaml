@@ -1,0 +1,32 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: SupplyTraceUpgradeable
+    network: sepolia
+    source:
+      address: "0x2d6e1979c944DdfCBF34FE1f172DED5e600bEc60"
+      abi: SupplyTraceUpgradeable
+      # Set this to the block your proxy was deployed on (check Sepolia Etherscan)
+      # Using 0 works but causes slow initial sync — update before production deploy
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Batch
+        - CustodyTransfer
+        - Recall
+      abis:
+        - name: SupplyTraceUpgradeable
+          file: ./abis/SupplyTraceUpgradeable.json
+      eventHandlers:
+        - event: BatchMinted(indexed uint256,indexed address,uint256)
+          handler: handleBatchMinted
+        - event: BatchTransferred(indexed uint256,indexed address,indexed address,uint256,uint256)
+          handler: handleBatchTransferred
+        - event: BatchRecalled(indexed uint256)
+          handler: handleBatchRecalled
+      file: ./src/mapping.ts
