@@ -1,52 +1,164 @@
+# =============================================================================
+# SupplyTrace — Monorepo .gitignore
+# Stack: React/Vite/TypeScript · Hardhat/Solidity · The Graph
+# =============================================================================
+
+# -----------------------------------------------------------------------------
 # Dependencies
+# -----------------------------------------------------------------------------
 node_modules/
 **/node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
 
-# Build outputs
-dist/
-dist-ssr/
-**/dist/
-build/
-
-# Environment files (NEVER commit secrets)
+# -----------------------------------------------------------------------------
+# Environment & Secrets  (NEVER commit these)
+# -----------------------------------------------------------------------------
 .env
 .env.local
+.env.development
+.env.production
+.env.test
 .env.*.local
 **/.env
 **/.env.local
 **/.env.*.local
+**/.env.development
+**/.env.production
 
+# -----------------------------------------------------------------------------
+# Build Outputs & Caches
+# -----------------------------------------------------------------------------
+dist/
+dist-ssr/
+**/dist/
+build/
+out/
+.vite/
+**/.vite/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Vite
+vite.config.ts.timestamp-*
+
+# -----------------------------------------------------------------------------
 # Hardhat / Solidity
+# -----------------------------------------------------------------------------
 smart-contracts/cache/
 smart-contracts/artifacts/
 smart-contracts/typechain-types/
 smart-contracts/coverage/
 smart-contracts/coverage.json
-smart-contracts/ignition/deployments/chain-31337
+
+# hardhat-deploy — ignore local network deployments, keep testnets/mainnet
+smart-contracts/deployments/localhost/
+smart-contracts/deployments/hardhat/
+
+# Hardhat Ignition — ignore local chain deployments
+smart-contracts/ignition/deployments/chain-31337/
+
+# OpenZeppelin Upgrades — ignore local, keep real networks
+smart-contracts/.openzeppelin/unknown-*.json
+
+# Hardhat node logs
+smart-contracts/hardhat-node.log
+smart-contracts/hardhat-node-out.log
+smart-contracts/hardhat-node-err.log
 smart-contracts/hardhat-node*.log
 
-# The Graph
+# Solidity compiler output
+smart-contracts/metadata/
+
+# Gas reporter output
+gas-report.txt
+
+# -----------------------------------------------------------------------------
+# The Graph / Subgraph
+# -----------------------------------------------------------------------------
 subgraph/build/
 subgraph/generated/
 
-# OS / editor
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+**/*.log
+
+# -----------------------------------------------------------------------------
+# Test Artifacts & Debug Files
+# -----------------------------------------------------------------------------
+# Stray test data files
+test-batch-metadata.json
+**/*.test.json
+**/test-data/
+coverage/
+**/.nyc_output/
+
+# Debug screenshots / media dumps
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+!frontend/public/**
+!frontend/src/assets/**
+!docs/**
+
+# Stray CSV / database dumps
+*.csv
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.rej
+
+# -----------------------------------------------------------------------------
+# OS-Generated Files
+# -----------------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# Editor & IDE
+# -----------------------------------------------------------------------------
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
 .idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.swp
+.history/
 
-# Logs
-*.log
-logs/
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# TypeScript
-*.tsbuildinfo
+# -----------------------------------------------------------------------------
+# Misc
+# -----------------------------------------------------------------------------
+example_readme.md
+.eslintcache
+.stylelintcache
