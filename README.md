@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/Solidity-0.8.22-363636?style=for-the-badge&logo=solidity&logoColor=white"/>
   <img src="https://img.shields.io/badge/Hardhat-2.22-F7DF1E?style=for-the-badge&logo=ethereum&logoColor=black"/>
   <img src="https://img.shields.io/badge/OpenZeppelin-5.4-4E5EE4?style=for-the-badge&logo=openzeppelin&logoColor=white"/>
-  <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
-  <img src="https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white"/>
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
+  <img src="https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white"/>
   <img src="https://img.shields.io/badge/The_Graph-Subgraph-6747ED?style=for-the-badge&logo=thegraph&logoColor=white"/>
   <img src="https://img.shields.io/badge/IPFS-Metadata-65C2CB?style=for-the-badge&logo=ipfs&logoColor=white"/>
 </p>
@@ -36,6 +36,9 @@
 
 ```
 supplytrace/
+├── .github/
+│   └── workflows/                    # CI/CD pipelines
+├── docs/                             # Architecture and project docs
 ├── smart-contracts/                  # Hardhat project
 │   ├── contracts/
 │   │   ├── SupplyTraceUpgradeable.sol     # Production contract (UUPS proxy)
@@ -56,6 +59,7 @@ supplytrace/
 │
 ├── frontend/                         # React + Vite + TypeScript frontend
 │   ├── src/
+│   │   ├── assets/                        # Static assets (images, fonts, svgs)
 │   │   ├── pages/
 │   │   │   ├── Dashboard.tsx              # Overview and role status
 │   │   │   ├── MintBatch.tsx              # Mint form for manufacturers
@@ -86,7 +90,7 @@ supplytrace/
 │   └── abis/SupplyTraceUpgradeable.json   # ABI used by the subgraph
 │
 ├── SECURITY.md                       # Threat model and security notes
-└── test-batch-metadata.json          # Example IPFS metadata for testing
+└── README.md
 ```
 
 ---
@@ -99,8 +103,8 @@ supplytrace/
 | **Access control** | OZ AccessControl — ADMIN, MANUFACTURER, DISTRIBUTOR, RETAILER, INSPECTOR |
 | **Security** | ReentrancyGuard · Pausable · Custom errors · Storage-gap layout |
 | **Tooling** | Hardhat 2.22 · hardhat-deploy · hardhat-upgrades · TypeChain · hardhat-gas-reporter |
-| **Frontend** | React 18 · Vite 5 · TypeScript · Tailwind CSS · shadcn/ui · framer-motion |
-| **Web3 bindings** | wagmi v2 · viem v2 · @tanstack/react-query |
+| **Frontend** | React 19 · Vite 7 · TypeScript · Tailwind CSS · shadcn/ui · framer-motion |
+| **Web3 bindings** | wagmi v3 · viem v2 · @tanstack/react-query |
 | **Theme** | Warm gold/navy palette · Light/Dark/System modes · `localStorage` persistence · zero-flicker |
 | **Metadata storage** | IPFS via Pinata — multi-gateway fallback (Cloudflare → ipfs.io → dweb.link → Pinata) |
 | **Indexing** | The Graph — AssemblyScript subgraph on Sepolia |
@@ -193,16 +197,17 @@ mintBatch()
 ### 1 — Clone the repository
 
 ```bash
-git clone https://github.com/your-username/supplytrace.git
-cd supplytrace
+git clone https://github.com/JaiivantArvind/SupplyTrace.git
+cd SupplyTrace
 ```
 
-### 2 — Install smart-contract dependencies
+### 2 — Install all dependencies (monorepo)
 
 ```bash
-cd smart-contracts
 npm install
 ```
+
+This installs dependencies for all three workspaces (`frontend`, `smart-contracts`, `subgraph`) in one step.
 
 Create `smart-contracts/.env`:
 
@@ -247,12 +252,7 @@ npx hardhat run scripts/grant-roles.ts --network sepolia
 
 This grants MANUFACTURER, DISTRIBUTOR, and RETAILER roles to the target wallet.
 
-### 7 — Install frontend dependencies
-
-```bash
-cd ../frontend
-npm install
-```
+### 7 — Configure the frontend
 
 Create `frontend/.env.local`:
 
@@ -321,7 +321,6 @@ The subgraph indexes three events into three entities:
 
 ```bash
 cd subgraph
-npm install
 
 # Authenticate with Graph Studio
 graph auth --studio <DEPLOY_KEY>
