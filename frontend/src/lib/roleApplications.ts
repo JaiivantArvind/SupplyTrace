@@ -2,6 +2,14 @@ import { createWalletClient, http, keccak256, toBytes } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { hardhat } from 'viem/chains'
 import { contractAddress, contractAbi, isLocalDev } from '@/config/contracts'
+import {
+  getDbRoleApplications,
+  insertDbRoleApplication,
+  updateDbRoleApplicationStatus,
+  upsertDbOrganization,
+  supabase,
+  type DbRoleApplication,
+} from '@/lib/supabase'
 
 export type SupplyChainRole = 'MANUFACTURER' | 'DISTRIBUTOR' | 'RETAILER' | 'INSPECTOR'
 
@@ -29,76 +37,137 @@ export const ROLE_HASHES: Record<SupplyChainRole, `0x${string}`> = {
 const STORAGE_KEY = 'supplytrace_role_applications'
 const DEMO_PERSONA_KEY = 'supplytrace_demo_persona'
 
-// Pre-seeded enterprise applications for realistic admin queue showcase
-const INITIAL_APPLICATIONS: RoleApplication[] = [
-  {
-    id: 'app_seed_001',
-    address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
-    organizationName: 'PharmaCore Biologics AG',
-    registrationNumber: 'EMA-GMP-2026-9481',
-    contactEmail: 'compliance@pharmacore-bio.ch',
-    role: 'MANUFACTURER',
-    scopeDescription: 'Manufacturer of temperature-controlled monoclonal antibody batches.',
-    submittedAt: Date.now() - 3600 * 1000 * 5,
-    status: 'APPROVED',
-  },
-  {
-    id: 'app_seed_002',
-    address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
-    organizationName: 'GlobalCold Supply Logistics',
-    registrationNumber: 'ISO-9001-TRANS-8120',
-    contactEmail: 'operations@globalcold-logistics.com',
-    role: 'DISTRIBUTOR',
-    scopeDescription: 'Tier-1 international distribution hubs and pharmaceutical refrigerated freight.',
-    submittedAt: Date.now() - 3600 * 1000 * 2,
-    status: 'PENDING',
-  },
-]
+function mapDbToApp(row: DbRoleApplication): RoleApplication {
+  return {
+    id: row.id,
+    address: row.wallet_address as `0x${string}`,
+    organizationName: row.organization_name,
+    registrationNumber: row.registration_number,
+    contactEmail: row.contact_email,
+    role: row.requested_role,
+    scopeDescription: row.scope_description || '',
+    submittedAt: new Date(row.created_at).getTime(),
+    status: row.status,
+    reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).getTime() : undefined,
+    txHash: row.tx_hash || undefined,
+  }
+}
+
+// ── Initial Local State & Background Supabase Sync ──────────────────────────
 
 export function getRoleApplications(): RoleApplication[] {
-  if (typeof window === 'undefined') return INITIAL_APPLICATIONS
+  if (typeof window === 'undefined') return []
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_APPLICATIONS))
-      return INITIAL_APPLICATIONS
+    if (raw) {
+      return JSON.parse(raw) as RoleApplication[]
     }
-    return JSON.parse(raw) as RoleApplication[]
   } catch (err) {
-    console.error('Failed to parse role applications from localStorage:', err)
-    return INITIAL_APPLICATIONS
+    console.error('Failed to parse cached role applications:', err)
   }
+  return []
+}
+
+// Asynchronously sync from Supabase and fire update event
+export async function syncApplicationsFromSupabase(): Promise<RoleApplication[]> {
+  const dbRows = await getDbRoleApplications()
+  if (dbRows && dbRows.length > 0) {
+    const mapped = dbRows.map(mapDbToApp)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped))
+      window.dispatchEvent(new CustomEvent('supplytrace:applications-updated', { detail: mapped }))
+    }
+    return mapped
+  }
+  return getRoleApplications()
+}
+
+// Initialize Supabase sync and Realtime listener on client load
+if (typeof window !== 'undefined') {
+  syncApplicationsFromSupabase().catch(console.warn)
+
+  // Realtime subscription: auto-sync whenever another user inserts/updates an application
+  supabase
+    .channel('supplytrace_applications_realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'supplytrace_role_applications' },
+      () => {
+        syncApplicationsFromSupabase().catch(console.warn)
+      }
+    )
+    .subscribe()
 }
 
 export function submitRoleApplication(
   data: Omit<RoleApplication, 'id' | 'submittedAt' | 'status'>
 ): RoleApplication {
   const current = getRoleApplications()
+  const localId = `app_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
   const newApp: RoleApplication = {
     ...data,
-    id: `app_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    id: localId,
     submittedAt: Date.now(),
     status: 'PENDING',
   }
   const updated = [newApp, ...current]
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-  window.dispatchEvent(new CustomEvent('supplytrace:applications-updated', { detail: updated }))
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    window.dispatchEvent(new CustomEvent('supplytrace:applications-updated', { detail: updated }))
+  }
+
+  // Push to Supabase in background
+  insertDbRoleApplication({
+    wallet_address: data.address,
+    organization_name: data.organizationName,
+    registration_number: data.registrationNumber,
+    contact_email: data.contactEmail,
+    requested_role: data.role,
+    scope_description: data.scopeDescription,
+  }).then((saved) => {
+    if (saved) {
+      syncApplicationsFromSupabase().catch(console.warn)
+    }
+  }).catch(console.warn)
+
   return newApp
 }
 
 export function updateApplicationStatus(
   id: string,
   status: 'APPROVED' | 'REJECTED',
-  txHash?: string
+  txHash?: string,
+  reviewerAddress?: string
 ): void {
   const current = getRoleApplications()
-  const updated = current.map((app) =>
-    app.id === id
-      ? { ...app, status, reviewedAt: Date.now(), txHash: txHash || app.txHash }
-      : app
-  )
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-  window.dispatchEvent(new CustomEvent('supplytrace:applications-updated', { detail: updated }))
+  let targetApp: RoleApplication | undefined
+
+  const updated = current.map((app) => {
+    if (app.id === id) {
+      targetApp = { ...app, status, reviewedAt: Date.now(), txHash: txHash || app.txHash }
+      return targetApp
+    }
+    return app
+  })
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    window.dispatchEvent(new CustomEvent('supplytrace:applications-updated', { detail: updated }))
+  }
+
+  // Update in Supabase in background
+  updateDbRoleApplicationStatus(id, status, txHash, reviewerAddress).catch(console.warn)
+
+  // If approved, also register organization in verified organizations table
+  if (status === 'APPROVED' && targetApp) {
+    upsertDbOrganization({
+      wallet_address: targetApp.address,
+      organization_name: targetApp.organizationName,
+      registration_number: targetApp.registrationNumber,
+      role: targetApp.role,
+      contact_email: targetApp.contactEmail,
+    }).catch(console.warn)
+  }
 }
 
 export function getApplicationForAddress(address?: string): RoleApplication | undefined {
@@ -127,7 +196,6 @@ export function setDemoPersona(role: SupplyChainRole | null): void {
 }
 
 // ── Hardhat Local On-Chain Role Dispenser ─────────────────────────────────────
-// Uses default Account #0 (Hardhat deployer & admin) to grant real on-chain roles locally
 
 const LOCAL_ADMIN_PRIVATE_KEY =
   '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
