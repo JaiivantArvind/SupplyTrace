@@ -1,14 +1,15 @@
-import { useState } from 'react'
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { contractAddress, contractAbi } from '@/lib/contract'
+import { useState, useEffect } from 'react'
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { contractAddress, contractAbi } from '@/config/contracts'
 import { useRole } from '@/hooks/useRole'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ShieldCheck, AlertCircle } from 'lucide-react'
+import { ShieldCheck, AlertCircle, PauseCircle, PlayCircle } from 'lucide-react'
 import { keccak256, toBytes } from 'viem'
 
 const ROLE_OPTIONS = [
@@ -22,6 +23,21 @@ const ROLE_OPTIONS = [
 export default function AdminPanel() {
   const { isAdmin, isConnected } = useRole()
 
+  // Circuit breaker state
+  const { data: isPaused, refetch: refetchPaused } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'paused',
+  })
+  const { data: pauseHash, writeContract: writePause, isPending: pausePending, error: pauseError } = useWriteContract()
+  const { isLoading: pauseConfirming, isSuccess: pauseSuccess } = useWaitForTransactionReceipt({ hash: pauseHash })
+
+  useEffect(() => {
+    if (pauseSuccess) {
+      refetchPaused()
+    }
+  }, [pauseSuccess, refetchPaused])
+
   // Recall state
   const [recallTokenId, setRecallTokenId] = useState('')
   const { data: recallHash, writeContract: writeRecall, isPending: recallPending, error: recallError } = useWriteContract()
@@ -33,6 +49,14 @@ export default function AdminPanel() {
   const [grantAction, setGrantAction] = useState<'grant' | 'revoke'>('grant')
   const { data: roleHash, writeContract: writeRole, isPending: rolePending, error: roleError } = useWriteContract()
   const { isLoading: roleConfirming, isSuccess: roleSuccess } = useWaitForTransactionReceipt({ hash: roleHash })
+
+  const handleTogglePause = () => {
+    writePause({
+      address: contractAddress,
+      abi: contractAbi,
+      functionName: isPaused ? 'unpause' : 'pause',
+    })
+  }
 
   const handleRecall = () => {
     if (!recallTokenId) return
@@ -79,8 +103,53 @@ export default function AdminPanel() {
           <ShieldCheck className="w-6 h-6" />
           Admin Panel
         </h1>
-        <p className="text-muted-foreground mt-1">Recall batches and manage role assignments.</p>
+        <p className="text-muted-foreground mt-1">Circuit breaker, emergency recall, and role assignments.</p>
       </div>
+
+      {/* Circuit Breaker (Pause / Unpause) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              {isPaused ? <PauseCircle className="w-5 h-5 text-destructive" /> : <PlayCircle className="w-5 h-5 text-green-600" />}
+              Circuit Breaker
+            </CardTitle>
+            <Badge variant={isPaused ? 'destructive' : 'secondary'}>
+              {isPaused ? 'Contract Paused' : 'Active (Normal)'}
+            </Badge>
+          </div>
+          <CardDescription>
+            Freezes all minting and token transfers. Emergency recalls remain operational while paused.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            variant={isPaused ? 'default' : 'destructive'}
+            className="w-full"
+            onClick={handleTogglePause}
+            disabled={pausePending || pauseConfirming}
+          >
+            {pausePending
+              ? 'Confirm in MetaMask…'
+              : pauseConfirming
+              ? 'Confirming…'
+              : isPaused
+              ? 'Unpause Contract'
+              : 'Pause Contract (Freeze Operations)'}
+          </Button>
+          {pauseError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{pauseError.message}</AlertDescription>
+            </Alert>
+          )}
+          {pauseSuccess && (
+            <Alert className="border-green-200 bg-green-50 text-green-800">
+              <AlertDescription>Circuit breaker state updated successfully.</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recall */}
       <Card className="border-destructive/30">

@@ -1,17 +1,21 @@
-import { ethers, network } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
 
-  console.log("Deploying SupplyTrace...");
+  console.log("Deploying SupplyTraceUpgradeable...");
   console.log("Deployer address:", deployer.address);
   console.log("Network:", network.name);
 
-  const SupplyTrace = await ethers.getContractFactory("SupplyTrace");
-  const supplyTrace = await SupplyTrace.deploy("ipfs://");
+  const SupplyTraceUpgradeable = await ethers.getContractFactory("SupplyTraceUpgradeable");
+  const supplyTrace = await upgrades.deployProxy(SupplyTraceUpgradeable, ["ipfs://"], {
+    initializer: "initialize",
+    kind: "uups",
+  });
   await supplyTrace.waitForDeployment();
 
-  console.log("SupplyTrace deployed to:", await supplyTrace.getAddress());
+  const proxyAddress = await supplyTrace.getAddress();
+  console.log("SupplyTraceUpgradeable proxy deployed to:", proxyAddress);
 }
 
 main().catch((error) => {

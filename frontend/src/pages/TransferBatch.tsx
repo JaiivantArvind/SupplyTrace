@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { contractAddress, contractAbi } from '@/lib/contract'
+import { contractAddress, contractAbi } from '@/config/contracts'
 import { useRole } from '@/hooks/useRole'
 import { BatchStateBadge } from '@/components/BatchStateBadge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

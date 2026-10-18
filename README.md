@@ -2,416 +2,437 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Solidity-0.8.22-363636?style=for-the-badge&logo=solidity&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Hardhat-2.22-F7DF1E?style=for-the-badge&logo=ethereum&logoColor=black"/>
-  <img src="https://img.shields.io/badge/OpenZeppelin-5.4-4E5EE4?style=for-the-badge&logo=openzeppelin&logoColor=white"/>
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
-  <img src="https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white"/>
-  <img src="https://img.shields.io/badge/The_Graph-Subgraph-6747ED?style=for-the-badge&logo=thegraph&logoColor=white"/>
-  <img src="https://img.shields.io/badge/IPFS-Metadata-65C2CB?style=for-the-badge&logo=ipfs&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Hardhat-2.22.3-F7DF1E?style=for-the-badge&logo=ethereum&logoColor=black"/>
+  <img src="https://img.shields.io/badge/OpenZeppelin-5.4.0-4E5EE4?style=for-the-badge&logo=openzeppelin&logoColor=white"/>
+  <img src="https://img.shields.io/badge/React-19.2.0-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
+  <img src="https://img.shields.io/badge/Vite-7.3.1-646CFF?style=for-the-badge&logo=vite&logoColor=white"/>
+  <img src="https://img.shields.io/badge/The_Graph-0.98.1-6747ED?style=for-the-badge&logo=thegraph&logoColor=white"/>
+  <img src="https://img.shields.io/badge/IPFS-Multi--Gateway-65C2CB?style=for-the-badge&logo=ipfs&logoColor=white"/>
 </p>
 
-> **Decentralised supply chain provenance on Ethereum.**  
-> Mint product batches as ERC-1155 tokens, enforce role-gated custody transfers on-chain, and let any consumer verify authenticity — no intermediary required.
+> **Decentralized supply chain provenance and verification on Ethereum.**  
+> Tokenize physical product batches as ERC-1155 tokens, enforce cryptographically verified custody transfers on-chain, and allow any consumer to verify product origin and authenticity instantly — zero intermediaries required.
 
 ---
 
-## ✨ Features
+## 1. Overview & Problem Statement
 
-| Feature | Detail |
-|---|---|
-| 🏭 **Batch minting** | Manufacturers tokenise product batches as ERC-1155 tokens with IPFS metadata |
-| 🔁 **Role-gated transfers** | Custody moves Manufacturer → Distributor → Retailer → Sold, enforced by the contract |
-| 🔎 **Consumer verification** | Anyone with a token ID can verify manufacturer, state, and full IPFS metadata via a public page |
-| 🛑 **Emergency recall** | Admins can instantly deactivate any batch and transition it to `CLOSED` |
-| ⏸️ **Pausable circuit breaker** | Contract operations can be frozen by an admin while recall always stays live |
-| 🔒 **UUPS upgradeability** | Implementation upgradeable behind a transparent proxy with storage-layout safety |
-| 🏛️ **Multi-sig governance** | Admin role transferable to a Gnosis Safe for multi-party control |
-| 📊 **The Graph indexing** | `BatchMinted`, `BatchTransferred`, `BatchRecalled` events indexed for efficient history queries |
-| 📦 **IPFS metadata** | Product metadata (name, manufacturer, certifications, geo-coordinates) stored on IPFS via Pinata |
-| 🔑 **QR verification** | Every batch generates a shareable QR code linking directly to its verification page |
+Global supply chains suffer from widespread vulnerabilities: counterfeit goods, opaque custody transfers, paper-based tracking prone to fraud, and slow, imprecise recall mechanisms.
+
+**SupplyTrace** resolves these challenges by providing an immutable, public audit trail on the Ethereum blockchain:
+- **Manufacturers** mint batches with immutable IPFS-linked metadata (origin, batch numbers, certifications).
+- **Supply Chain Custody** follows a strictly enforced state machine (`Manufacturer` → `Distributor` → `Retailer` → `Sold`).
+- **Consumers** verify authenticity by scanning a product QR code without needing a Web3 wallet or browser extension.
+- **Auditors & Admins** can freeze compromised batches via emergency recall and circuit-breaker pause mechanisms.
 
 ---
 
-## 🗂️ Project Structure
+## 2. Architecture Overview
+
+SupplyTrace is structured into three distinct tiers:
+
+```mermaid
+graph TD
+    subgraph Client Tier ["Client Tier (Frontend)"]
+        UI["React 19 / Vite UI (:5173)"]
+        Wagmi["Wagmi v3 / Viem v2 Provider"]
+        IPFS_C["Multi-Gateway IPFS Resolver"]
+        UI --> Wagmi
+        UI --> IPFS_C
+    end
+
+    subgraph Blockchain Tier ["Consensus & Execution Tier"]
+        Proxy["ERC-1967 UUPS Proxy<br/>0x2d6e...Ec60"]
+        Impl["SupplyTraceUpgradeable<br/>0x6464...FD64"]
+        Node["Hardhat Local Node (:8545) / Sepolia"]
+        Proxy -->|delegates to| Impl
+        Wagmi -->|JSON-RPC / Calls| Proxy
+        Node -.-> Proxy
+    end
+
+    subgraph Indexing Tier ["Indexing & Storage Tier"]
+        Subgraph["The Graph Subgraph<br/>(WASM Mapping)"]
+        GraphNode["The Graph Studio / Local Node"]
+        IPFS["Decentralized Storage<br/>(IPFS / Pinata)"]
+        Proxy -->|Emits Events| Subgraph
+        Subgraph --> GraphNode
+        UI -->|GraphQL Queries| GraphNode
+        IPFS_C -->|Fetches Metadata| IPFS
+    end
+```
+
+---
+
+## 3. Verified Features
+
+| Feature | Implementation Status | Technical Detail |
+| :--- | :---: | :--- |
+| **ERC-1155 Batch Minting** | Verified | Role-restricted to `MANUFACTURER_ROLE`. Mints unique `tokenId` with batch quantity and IPFS URI. |
+| **Strict Custody State Machine** | Verified | State transitions strictly enforced: `CREATED` → `DISTRIBUTED` → `RETAIL` → `SOLD`. State rollback or reuse is blocked. |
+| **Role-Gated Access Control** | Verified | OpenZeppelin `AccessControlUpgradeable` with `ADMIN_ROLE`, `MANUFACTURER_ROLE`, `DISTRIBUTOR_ROLE`, `RETAILER_ROLE`. |
+| **Emergency Batch Recall** | Verified | Admins can recall active batches into `CLOSED` state; operates even when contract is paused. |
+| **Pausable Circuit Breaker** | Verified | Pauses minting and token transfers while preserving emergency recall capabilities. Admin UI integration verified. |
+| **UUPS Upgradeability** | Verified | ERC-1967 proxy with 45 reserved storage gap slots (`__gap[45]`) and upgrade authorization restricted to `ADMIN_ROLE`. |
+| **Consumer QR Verification** | Verified | Public route (`/verify/:tokenId`) resolves batch metadata, manufacturer address, and custody count without requiring a wallet. |
+| **Multi-Gateway IPFS Fetcher** | Verified | Failover across 4 public gateways (`ipfs.io`, `dweb.link`, `gateway.pinata.cloud`, `cloudflare-ipfs.com`). |
+| **The Graph Indexing** | Verified | Subgraph indexes `BatchMinted`, `BatchTransferred`, `BatchRecalled` into GraphQL entities with RPC log fallback. |
+| **Multi-Sig Governance Handoff**| Verified | Automated script to transfer `ADMIN_ROLE` and `DEFAULT_ADMIN_ROLE` to a Gnosis Safe multi-sig contract. |
+
+---
+
+## 4. Technology Stack
+
+### Smart Contracts (Execution Tier)
+- **Language**: Solidity `0.8.22` (EVM target: `paris`)
+- **Framework**: Hardhat `2.22.3`
+- **Libraries**: OpenZeppelin Contracts Upgradeable `v5.4.0` (ERC-1155, UUPSUpgradeable, AccessControlUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable)
+- **Deployment & Typings**: `hardhat-deploy`, `@openzeppelin/hardhat-upgrades`, TypeChain (Ethers v6)
+- **Test Framework**: Mocha, Chai (63 unit tests passing)
+
+### Frontend (Client Tier)
+- **Framework**: React `19.2.0`, Vite `7.3.1`
+- **Language**: TypeScript `~5.9.3` (Strict Mode)
+- **Styling**: Tailwind CSS `3.4.10`, Radix UI primitives, Lucide Icons, Framer Motion
+- **Web3 Integration**: Wagmi `3.5.0`, Viem `2.46.3`, `@tanstack/react-query` `5.90.21`
+- **QR Generation & Scanning**: `qrcode`, `html5-qrcode`
+
+### Subgraph (Indexing Tier)
+- **Runtime**: The Graph Protocol (Spec: `0.0.4`, Mapping API: `0.0.6`)
+- **Compiler**: `@graphprotocol/graph-cli` `0.98.1`, `@graphprotocol/graph-ts` `0.35.1`
+
+---
+
+## 5. Repository Directory Tree
 
 ```
-supplytrace/
-├── .github/
-│   └── workflows/                    # CI/CD pipelines
-├── docs/                             # Architecture and project docs
-├── smart-contracts/                  # Hardhat project
+SupplyTrace/
+├── Start.bat                         # Interactive & CLI Windows launcher
+├── init.md                           # Comprehensive environment & bootstrap contract
+├── PROJECT_AUDIT.md                  # Complete architectural audit & execution log
+├── SECURITY.md                       # Threat model, invariants, and security disclosure
+├── README.md                         # Project documentation
+├── .env.example                      # Root environment variable template
+├── .npmrc                            # Root npm config (legacy-peer-deps=true)
+├── package.json                      # Root workspace scripts (--prefix delegation)
+├── package-lock.json                 # Root lockfile
+│
+├── smart-contracts/                  # Consensus & Smart Contracts Tier
 │   ├── contracts/
-│   │   ├── SupplyTraceUpgradeable.sol     # Production contract (UUPS proxy)
-│   │   └── SupplyTraceUpgradeableV2.sol   # Example V2 (upgrade demonstration)
+│   │   ├── SupplyTraceUpgradeable.sol    # Canonical UUPS proxy implementation
+│   │   ├── SupplyTraceUpgradeableV2.sol  # V2 upgrade demonstration contract
+│   │   └── legacy/
+│   │       └── SupplyTrace.sol           # Non-upgradeable prototype (archived)
 │   ├── deploy/
-│   │   └── 00_deploy_supplytrace.ts       # Deterministic hardhat-deploy script
+│   │   └── 00_deploy_supplytrace.ts      # Automated deterministic deployment script
 │   ├── scripts/
-│   │   ├── deploy.ts                      # Manual deploy helper
-│   │   ├── upgrade.ts                     # Upgrade proxy to V2
-│   │   ├── grant-roles.ts                 # Grant supply-chain roles to a wallet
-│   │   ├── check-roles.ts                 # Check roles for an address
-│   │   ├── transfer-admin-to-safe.ts      # Hand admin to a Gnosis Safe
-│   │   └── export-frontend.ts             # Copy ABI + address to frontend
+│   │   ├── deploy.ts                     # Manual UUPS proxy deployer
+│   │   ├── upgrade.ts                    # UUPS proxy upgrade helper
+│   │   ├── export-frontend.ts            # Copies ABI & address to frontend
+│   │   ├── grant-roles.ts                # Assigns supply chain roles to an address
+│   │   ├── check-roles.ts                # Queries active roles for an address
+│   │   └── transfer-admin-to-safe.ts     # Transfers admin roles to Gnosis Safe
 │   ├── test/
-│   │   └── SupplyTrace.test.ts            # 63 tests across 8 describe blocks
-│   ├── hardhat.config.ts
-│   └── package.json
+│   │   └── SupplyTrace.test.ts           # 63 unit tests across 8 test suites
+│   ├── .openzeppelin/
+│   │   └── sepolia.json                  # Linear storage layout registry (slots 0-4)
+│   ├── hardhat.config.ts                 # Hardhat configuration (Solidity, networks, accounts)
+│   ├── .env.example                      # Contract environment template
+│   └── package.json                      # Contract dependencies and scripts
 │
-├── frontend/                         # React + Vite + TypeScript frontend
+├── frontend/                         # React 19 Client Web Application
 │   ├── src/
-│   │   ├── assets/                        # Static assets (images, fonts, svgs)
+│   │   ├── config/
+│   │   │   └── contracts.ts              # Canonical contract address & ABI export
+│   │   ├── contracts/
+│   │   │   └── SupplyTrace.json          # Exported ABI synced from smart contracts
 │   │   ├── pages/
-│   │   │   ├── Dashboard.tsx              # Overview and role status
-│   │   │   ├── MintBatch.tsx              # Mint form for manufacturers
-│   │   │   ├── TransferBatch.tsx          # Transfer form with role routing
-│   │   │   ├── ExploreBatches.tsx         # Browse all on-chain batches
-│   │   │   ├── Verify.tsx                 # Public consumer verification page
-│   │   │   └── AdminPanel.tsx             # Pause, recall, role management
+│   │   │   ├── Dashboard.tsx             # Overview and role-gated quick actions
+│   │   │   ├── MintBatch.tsx             # Batch tokenization form & QR generator
+│   │   │   ├── TransferBatch.tsx         # Custody transfer with recipient routing
+│   │   │   ├── ExploreBatches.tsx        # Searchable table of all on-chain batches
+│   │   │   ├── Verify.tsx                # Public consumer verification portal
+│   │   │   ├── AdminPanel.tsx            # Circuit breaker, recall, role management
+│   │   │   └── Settings.tsx              # Theme switcher & wallet status
 │   │   ├── hooks/
-│   │   │   ├── useBatches.ts              # Fetch all minted batches via logs
-│   │   │   ├── useRole.ts                 # Resolve connected wallet's role
-│   │   │   └── useSubgraphCustody.ts      # Query custody history from subgraph
-│   │   ├── components/
-│   │   │   ├── Layout.tsx                 # Sidebar navigation
-│   │   │   ├── WalletButton.tsx           # Connect / disconnect wallet
-│   │   │   ├── BatchStateBadge.tsx        # Coloured state pill
-│   │   │   └── RoleBadge.tsx              # Role label chip
-│   │   ├── utils/
-│   │   │   └── ipfs.ts                    # Multi-gateway IPFS fetcher
-│   │   ├── config/contracts.ts            # Contract address + ABI imports
-│   │   ├── contracts/SupplyTrace.json     # Exported ABI (synced from artifacts)
-│   │   └── main.tsx                       # Wagmi + React Query providers
-│   └── package.json
+│   │   │   ├── useBatches.ts             # On-chain batch discovery via event logs
+│   │   │   ├── useRole.ts                # Resolves caller's supply chain roles
+│   │   │   └── useSubgraphCustody.ts     # Custody transfer history via GraphQL
+│   │   ├── lib/
+│   │   │   ├── ipfs-gateways.ts          # Resilient multi-gateway IPFS fetcher
+│   │   │   └── theme.tsx                 # Light / Dark theme context provider
+│   │   └── main.tsx                      # Wagmi & QueryClient provider configuration
+│   ├── .env.example                      # Frontend environment template
+│   ├── eslint.config.js                  # ESLint 9 configuration
+│   └── package.json                      # Frontend dependencies and build scripts
 │
-├── subgraph/                         # The Graph subgraph
-│   ├── schema.graphql                     # Batch, CustodyTransfer, Recall entities
-│   ├── subgraph.yaml                      # Manifest — Sepolia, 3 event handlers
-│   ├── src/mapping.ts                     # AssemblyScript event handlers
-│   └── abis/SupplyTraceUpgradeable.json   # ABI used by the subgraph
-│
-├── SECURITY.md                       # Threat model and security notes
-└── README.md
+└── subgraph/                         # The Graph Indexing Subsystem
+    ├── schema.graphql                    # GraphQL schema (Batch, CustodyTransfer, Recall)
+    ├── subgraph.yaml                     # Manifest declaring event handlers & ABIs
+    ├── src/
+    │   └── mapping.ts                    # AssemblyScript event handlers
+    ├── abis/
+    │   └── SupplyTraceUpgradeable.json   # Contract ABI for graph codegen
+    └── package.json                      # Graph CLI dependencies & codegen scripts
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 6. Prerequisites & Supported Runtimes
 
-| Layer | Technology |
-|---|---|
-| **Smart contract** | Solidity 0.8.22 · ERC-1155 · OpenZeppelin Upgradeable 5.4 (UUPS) |
-| **Access control** | OZ AccessControl — ADMIN, MANUFACTURER, DISTRIBUTOR, RETAILER, INSPECTOR |
-| **Security** | ReentrancyGuard · Pausable · Custom errors · Storage-gap layout |
-| **Tooling** | Hardhat 2.22 · hardhat-deploy · hardhat-upgrades · TypeChain · hardhat-gas-reporter |
-| **Frontend** | React 19 · Vite 7 · TypeScript · Tailwind CSS · shadcn/ui · framer-motion |
-| **Web3 bindings** | wagmi v3 · viem v2 · @tanstack/react-query |
-| **Theme** | Warm gold/navy palette · Light/Dark/System modes · `localStorage` persistence · zero-flicker |
-| **Metadata storage** | IPFS via Pinata — multi-gateway fallback (Cloudflare → ipfs.io → dweb.link → Pinata) |
-| **Indexing** | The Graph — AssemblyScript subgraph on Sepolia |
-| **Governance** | Gnosis Safe multi-sig (admin handoff script included) |
-| **Network** | Ethereum Sepolia testnet · localhost Hardhat node |
+| Requirement | Supported Version | Host Verified Version | Notes |
+| :--- | :--- | :--- | :--- |
+| **Node.js** | `>= 20.0.0` (LTS) | `v24.16.0` | Active LTS or current v24 |
+| **npm** | `>= 10.0.0` | `12.0.2` | Workspaces supported via `--prefix` |
+| **Git** | `>= 2.40.0` | `2.56.0.windows.2`| Required for submodules / tracking |
+| **Browser** | Chromium / Firefox | Brave, Chrome, Edge | Web3 wallet extension required for writes |
 
 ---
 
-## ⛓️ Contract Architecture
+## 7. First-Time Installation & Setup
 
-### Role Hierarchy
-
-```
-DEFAULT_ADMIN_ROLE (Gnosis Safe)
-       │
-   ADMIN_ROLE ──────────── pause / unpause / recallBatch / grantRole
-       │
-MANUFACTURER_ROLE ───────── mintBatch → transferBatch (to DISTRIBUTOR)
-       │
-DISTRIBUTOR_ROLE  ───────── transferBatch (to RETAILER)
-       │
-RETAILER_ROLE     ───────── transferBatch (marks SOLD)
-       │
-INSPECTOR_ROLE    ───────── read-only auditing
-```
-
-### Lifecycle State Machine
-
-```
-mintBatch()
-    │
-  CREATED
-    │  transferBatch() — MANUFACTURER → DISTRIBUTOR
-  DISTRIBUTED
-    │  transferBatch() — DISTRIBUTOR → RETAILER
-  RETAIL
-    │  transferBatch() — RETAILER (end customer)
-  SOLD
-    │  recallBatch() — ADMIN at any state
-  CLOSED
-```
-
-### Storage Layout (slots 0 – 4 + `__gap[45]`)
-
-| Slot | Variable | Type |
-|---|---|---|
-| 0 | `batches` | `mapping(uint256 => ProductBatch)` |
-| 1 | `_legacyCustodyHistory` | `mapping(uint256 => CustodyRecord[])` *(deprecated, layout-frozen)* |
-| 2 | `batchState` | `mapping(uint256 => BatchState)` |
-| 3 | `_nextTokenId` | `uint256` |
-| 4 | `_custodyCount` | `mapping(uint256 => uint256)` |
-
-> OZ v5 upgradeable base contracts use ERC-7201 namespaced storage — they do **not** consume linear slots in child contracts.
-
-### Key Functions
-
-| Function | Caller | Description |
-|---|---|---|
-| `mintBatch(uri, qty)` | MANUFACTURER | Mint a new product batch as an ERC-1155 token |
-| `transferBatch(id, to, qty)` | MANUFACTURER / DISTRIBUTOR / RETAILER | Move custody to next supply chain actor |
-| `recallBatch(id)` | ADMIN | Deactivate batch; works even when paused |
-| `verifyAuthenticity(id)` | Anyone | Returns manufacturer, metadataURI, active, state, custodyCount |
-| `pause() / unpause()` | ADMIN | Enable / disable circuit breaker |
-
-### Custom Errors
-
-| Error | Trigger |
-|---|---|
-| `EmptyMetadataURI` | `mintBatch` called with empty URI |
-| `ZeroQuantity` | `mintBatch` or `transferBatch` with `quantity == 0` |
-| `ZeroAddress` | Transfer to `address(0)` |
-| `BatchInactive` | Operation on a recalled batch |
-| `AlreadyInactive` | Recalling an already-closed batch |
-| `InvalidState` | Transfer does not match expected lifecycle state |
-| `InvalidRole` | Recipient does not hold the required role for this transfer step |
-| `InvalidToken` | Token ID has never been minted |
-| `InsufficientBalance` | Sender does not hold enough tokens |
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+ and npm
-- Git
-- A browser wallet (MetaMask) funded with Sepolia ETH
-- A Pinata account for IPFS uploads
-
-### 1 — Clone the repository
-
+### Clone Repository
 ```bash
 git clone https://github.com/JaiivantArvind/SupplyTrace.git
 cd SupplyTrace
 ```
 
-### 2 — Install all dependencies (monorepo)
+### Install Dependencies
+Dependencies are installed per tier using npm's declared package manifests and lockfiles:
+```bash
+# Option A: Run via the Windows launcher (recommended)
+Start.bat install
+
+# Option B: Run manually via CLI
+npm ci --prefix smart-contracts
+npm ci --prefix frontend
+npm install --prefix subgraph
+```
+
+---
+
+## 8. Environment Variables & Configuration
+
+Copy the example environment files into local active configurations:
+
+```cmd
+copy .env.example .env
+copy smart-contracts\.env.example smart-contracts\.env
+copy frontend\.env.example frontend\.env
+```
+
+### Configuration Key Reference
+
+| Variable | Tier | Purpose | Default / Example Value |
+| :--- | :--- | :--- | :--- |
+| `SEPOLIA_RPC_URL` | Smart Contracts | Ethereum Sepolia JSON-RPC URL | `https://sepolia.infura.io/v3/YOUR_KEY` |
+| `PRIVATE_KEY` | Smart Contracts | 32-byte hex deployer private key | Masked / Placeholder |
+| `ETHERSCAN_API_KEY` | Smart Contracts | Contract source verification key | Optional placeholder |
+| `VITE_CONTRACT_ADDRESS`| Frontend | Target SupplyTrace proxy address | `0x2d6e1979c944DdfCBF34FE1f172DED5e600bEc60` |
+| `VITE_SUBGRAPH_URL` | Frontend | The Graph GraphQL query URL | Optional (falls back to RPC logs) |
+| `PINATA_JWT` | Frontend | IPFS pinning service token | Optional (demo fallback active) |
+
+> 🔒 **Security Notice**: Never commit `.env` files or private keys. The root `.gitignore` excludes all `.env` files across all directories.
+
+---
+
+## 9. Running Through `Start.bat`
+
+The root [Start.bat](file:///d:/Work/My%20Projects/SupplyTrace/T-1/SupplyTrace/Start.bat) file provides automated environment initialization, prerequisite checking, port conflict avoidance, and multi-tier process management.
+
+### Interactive Menu Mode
+Simply double-click `Start.bat` or run:
+```cmd
+Start.bat
+```
+Menu options:
+- `[1] Full Local Stack (Node + Deploy + Web UI)` — Launches a local Hardhat node on port 8545, polls until ready, deploys contracts, seeds local test roles, exports ABI to frontend, and opens `http://localhost:5173`.
+- `[2] Start Frontend Only` — Launches the Vite frontend connected to Sepolia or configured network.
+- `[3] Start Local Hardhat Node Only` — Starts the local node on port 8545 in a dedicated window.
+- `[4] Deploy Contracts to Localhost` — Deploys contracts to an active localhost node and exports artifacts.
+- `[5] Run Smart Contract Unit Tests` — Runs the full 63-test Mocha test suite.
+- `[6] Build Production Monorepo` — Compiles smart contracts and produces the optimized Vite production bundle.
+- `[7] Run Strict Typecheck and Linting` — Executes `tsc -b` and ESLint.
+- `[8] Verify / Reinstall All Dependencies` — Verifies or cleanly reinstalls packages.
+- `[0] Exit` — Terminates launcher.
+
+### Scriptable CLI Mode
+For CI/CD or non-interactive execution:
+```cmd
+Start.bat full       # Full local stack orchestration
+Start.bat frontend   # Launch Vite frontend server only
+Start.bat test       # Run 63 smart contract unit tests
+Start.bat build      # Compile contracts and build Vite production bundle
+Start.bat lint       # Run TypeScript strict typecheck & ESLint
+Start.bat check      # Validate prerequisites and environment templates
+```
+
+---
+
+## 10. Manual Development Commands
+
+If developing from the command line without the batch launcher:
 
 ```bash
-npm install
-```
+# 1. Compile smart contracts
+npm run compile --prefix smart-contracts
 
-This installs dependencies for all three workspaces (`frontend`, `smart-contracts`, `subgraph`) in one step.
+# 2. Run smart contract test suite
+npm test
 
-Create `smart-contracts/.env`:
+# 3. Start local Hardhat node
+npx hardhat node --prefix smart-contracts
 
-```env
-PRIVATE_KEY=0x<your_deployer_private_key>
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/<your_infura_key>
-ETHERSCAN_API_KEY=<your_etherscan_key>
-```
+# 4. Deploy to local node & export ABI (in a separate terminal)
+npx hardhat deploy --network localhost --reset --prefix smart-contracts
+npx hardhat run scripts/export-frontend.ts --network localhost --prefix smart-contracts
 
-### 3 — Compile and test
-
-```bash
-npx hardhat compile
-npx hardhat test
-```
-
-Expected: **63 passing**
-
-### 4 — Deploy locally
-
-```bash
-npx hardhat node
-# In a second terminal:
-npx hardhat deploy --network localhost --reset
-npx hardhat run scripts/export-frontend.ts --network localhost
-```
-
-### 5 — Deploy to Sepolia
-
-```bash
-npx hardhat deploy --network sepolia --reset
-npx hardhat run scripts/export-frontend.ts --network sepolia
-```
-
-### 6 — Grant supply-chain roles
-
-```bash
-# PowerShell
-$env:GRANT_ADDRESS="0xYourWalletAddress"
-npx hardhat run scripts/grant-roles.ts --network sepolia
-```
-
-This grants MANUFACTURER, DISTRIBUTOR, and RETAILER roles to the target wallet.
-
-### 7 — Configure the frontend
-
-Create `frontend/.env.local`:
-
-```env
-VITE_SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/<your_infura_key>
-VITE_SUBGRAPH_URL=   # leave empty until subgraph is deployed
-```
-
-### 8 — Start the frontend
-
-```bash
+# 5. Start frontend dev server
 npm run dev
+
+# 6. Typecheck and lint frontend
+npx tsc -b --prefix frontend
+npm run lint
+
+# 7. Compile subgraph WASM mapping
+npm run codegen --prefix subgraph
+npm run build --prefix subgraph
 ```
 
-Open [http://localhost:5173](http://localhost:5173) and connect your wallet.
+---
+
+## 11. Application URLs & Network Endpoints
+
+| Service | Address / Port | Network / Context | Notes |
+| :--- | :--- | :--- | :--- |
+| **Frontend Web App** | `http://localhost:5173` | Browser | Vite development server |
+| **Local Hardhat RPC** | `http://127.0.0.1:8545` | Chain ID `31337` | Local development chain |
+| **Sepolia Testnet RPC**| `https://rpc.sepolia.org` | Chain ID `11155111` | Ethereum Sepolia testnet |
+| **Sepolia Proxy** | `0x2d6e1979c944DdfCBF34FE1f172DED5e600bEc60` | Sepolia | Live deployed UUPS proxy |
+| **Sepolia Implementation**| `0x64641Ed583aB4aC7AAAa84213522f130F5e4FD64` | Sepolia | Underlying logic contract |
+| **IPFS Public Gateway**| `https://ipfs.io/ipfs/<CID>` | Global | Fallback gateway |
+| **Pinata Gateway** | `https://gateway.pinata.cloud/ipfs/<CID>`| Global | Primary IPFS gateway |
 
 ---
 
-## 🌐 Frontend Pages
+## 12. Primary Application Workflows
 
-| Page | Path | Description |
-|---|---|---|
-| **Dashboard** | `/` | Hero landing page (disconnected) · Role-based card grid (connected) |
-| **Mint Batch** | `/mint` | Form to mint a new batch with IPFS URI and quantity |
-| **Transfer Batch** | `/transfer` | Transfer custody to next role with token ID and recipient |
-| **Explore Batches** | `/explore` | Browse all minted batches indexed from on-chain logs |
-| **Verify** | `/verify/:tokenId` | Public consumer verification — metadata, state, custody count |
-| **Admin Panel** | `/admin` | Pause/unpause contract, recall batches, grant/revoke roles |
-| **Settings** | `/settings` | Switch Light / Dark / System theme · Disconnect wallet |
+### Workflow 1: Batch Tokenization (Manufacturer)
+1. Navigate to `/mint` and connect a wallet holding `MANUFACTURER_ROLE`.
+2. Enter batch metadata (Product Name, SKU, Certification, Quantity, IPFS URI).
+3. Confirm the `mintBatch(metadataURI, quantity)` transaction in MetaMask.
+4. On transaction confirmation, the application decodes the `BatchMinted` event, reveals the assigned `tokenId`, and renders a printable QR code linking to `/verify/:tokenId`.
 
-> **Consumer verification** is fully public — no wallet required. Share a link or QR code pointing to `/verify/<tokenId>`.
+### Workflow 2: Custody Transfer (Supply Chain Actor)
+1. Navigate to `/transfer` and connect a wallet holding the current custody role.
+2. Enter `tokenId`, recipient address, and transfer quantity.
+3. The contract enforces role transition validation:
+   - Manufacturer can only transfer to a verified `DISTRIBUTOR_ROLE` (`CREATED` → `DISTRIBUTED`).
+   - Distributor can only transfer to a verified `RETAILER_ROLE` (`DISTRIBUTED` → `RETAIL`).
+   - Retailer marks the batch `SOLD` upon sale to the final consumer.
+4. `BatchTransferred` is emitted with an immutable timestamp and indexed by The Graph.
+
+### Workflow 3: Consumer Verification (Public / Walletless)
+1. Consumer scans the physical product QR code or navigates directly to `/verify/:tokenId`.
+2. No wallet connection or gas tokens are required.
+3. The client queries `verifyAuthenticity(tokenId)` directly from the blockchain:
+   - Manufacturer address
+   - Active status (Authentic vs Recalled)
+   - Current lifecycle state badge
+   - Total custody handoffs
+4. IPFS metadata is resolved in parallel with automatic gateway fallback to display product photos, origin coordinates, and inspection certificates.
+
+### Workflow 4: Emergency Recall & Circuit Breaker (Admin)
+1. If a safety defect or counterfeit batch is detected, an admin accesses `/admin`.
+2. Enter the affected `tokenId` and execute `recallBatch(tokenId)`.
+3. The batch is permanently set to `active = false` and transitioned to `CLOSED`. Any subsequent attempts to transfer or trade this token revert immediately with `BatchInactive()`.
+4. If a widespread security issue occurs, the admin can toggle the contract-wide Circuit Breaker (`pause()`), halting all token transfers while preserving emergency recall operations.
 
 ---
 
-## 📦 IPFS Metadata Schema
+## 13. Data Models & Storage Layout
 
-Upload a JSON file to Pinata and pass the `ipfs://CID` as the `metadataURI` when minting.
+### Smart Contract Storage Layout (`SupplyTraceUpgradeable.sol`)
+The contract inherits OpenZeppelin Upgradeable contracts using ERC-7201 namespaced storage. The custom state variables occupy linear slots 0 through 4:
 
+| Slot Index | Variable Name | Type | Notes |
+| :---: | :--- | :--- | :--- |
+| **0** | `batches` | `mapping(uint256 => ProductBatch)` | Batch metadata & quantity struct |
+| **1** | `_legacyCustodyHistory` | `mapping(uint256 => CustodyRecord[])` | Archived / layout-frozen |
+| **2** | `batchState` | `mapping(uint256 => BatchState)` | Enum (0: CREATED, 1: DISTRIBUTED, 2: RETAIL, 3: SOLD, 4: CLOSED) |
+| **3** | `_nextTokenId` | `uint256` | Monotonically incrementing token identifier |
+| **4** | `_custodyCount` | `mapping(uint256 => uint256)` | Handoff counter for quick verification |
+| **5–49**| `__gap` | `uint256[45]` | Reserved storage slots for future V2/V3 upgrades |
+
+### IPFS Metadata Schema
+Batches store JSON documents on IPFS referencing the product identity:
 ```json
 {
-  "name": "Batch Name",
-  "description": "Product description",
-  "manufacturer": "Company Name",
-  "manufactureDate": "YYYY-MM-DD",
-  "location": "lat, lon",
+  "name": "Organic Arabica Coffee Batch #409",
+  "description": "Fair-trade certified single-origin coffee beans",
+  "manufacturer": "Andes Coffee Collective",
+  "manufactureDate": "2026-03-15",
+  "location": "4.5709,-74.2973",
   "certifications": [
-    { "name": "ISO-9001", "hash": "0x..." }
+    { "name": "Fair Trade Certified", "hash": "0x4a9b...7f21" },
+    { "name": "USDA Organic", "hash": "0x1b8c...90e3" }
   ],
-  "image": "ipfs://<image-CID>"
+  "image": "ipfs://QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco"
 }
 ```
 
 ---
 
-## 📊 The Graph Subgraph
+## 14. Testing & Validation
 
-The subgraph indexes three events into three entities:
-
-| Entity | Mutability | Source Event |
-|---|---|---|
-| `Batch` | mutable | `BatchMinted`, `BatchTransferred`, `BatchRecalled` |
-| `CustodyTransfer` | immutable | `BatchTransferred` |
-| `Recall` | immutable | `BatchRecalled` |
-
-### Deploy the subgraph
+The test suite covers full contract lifecycle, role enforcement, security invariants, reentrancy guards, and upgrade mechanics:
 
 ```bash
-cd subgraph
-
-# Authenticate with Graph Studio
-graph auth --studio <DEPLOY_KEY>
-
-# Generate types and build
-npm run codegen
-npm run build
-
-# Deploy
-graph deploy --studio supplytrace
+npm test
 ```
 
-After deployment, set `VITE_SUBGRAPH_URL` in `frontend/.env.local` to the subgraph query URL. Full custody transfer history will then appear on the Verify page.
+### Verified Test Suite Breakdown (63 Passing Tests)
+- **Deployment Suite**: Validates `ADMIN_ROLE` and `DEFAULT_ADMIN_ROLE` assignment to deployer.
+- **Role Assignment Suite**: Verifies admin role granting and ensures non-admins revert with custom errors.
+- **Minting Suite**: Validates manufacturer authorization, zero quantity rejection, empty URI rejection, and `_nextTokenId` incrementation.
+- **Transfer Hierarchy Suite**: Verifies sequential custody transitions, role matching, stranger transfer reverts, and custody count tracking.
+- **Recall Suite**: Tests emergency recall, deactivation, double-recall prevention, and recall under pause.
+- **verifyAuthenticity Suite**: Validates manufacturer lookup, active flag check, metadata URI retrieval, and non-existent token reverts.
+- **Pausable Suite**: Validates circuit breaker activation, minting/transfer blockage while paused, and recall exemption.
+- **UUPS Upgrade Suite**: Simulates V2 upgrade, ensures state persistence across proxy implementations, and blocks unauthorized upgrades.
+- **Multi-Sig Governance Suite**: Simulates Gnosis Safe takeover, role revocation, and upgrade execution under multi-sig ownership.
+- **Audit Invariants Suite**: Verifies sequential state transitions, reentrancy resistance, and event argument schemas.
 
 ---
 
-## 🔒 Security
+## 15. Troubleshooting & FAQ
 
-### Contract hardening checklist
+### 1. `Error HH8: Invalid account #0 for network sepolia - private key too short`
+- **Cause**: Hardhat was passed an unconfigured placeholder string (e.g. `your_deployer_private_key_here`) as `PRIVATE_KEY`.
+- **Solution**: The configuration in `smart-contracts/hardhat.config.ts` includes `isValidPrivateKey` regex validation. Ensure `smart-contracts/.env` either contains a valid 64-character hex private key or leave it empty when testing on local nodes.
 
-- [x] Custom errors (gas-cheaper than `require` strings)
-- [x] `ReentrancyGuard` on `transferBatch`
-- [x] `Pausable` circuit breaker — `mintBatch` and `transferBatch` blocked; `recallBatch` always live
-- [x] `_beforeTokenTransfer` blocked during pause via `whenNotPaused`
-- [x] UUPS `_authorizeUpgrade` restricted to `ADMIN_ROLE`
-- [x] Storage gap of 45 slots reserved for future upgrades
-- [x] `_disableInitializers()` in constructor prevents implementation contract initialisation
-- [x] `__gap` consumed from bottom-up to avoid layout shift
+### 2. `netstat` detects port 8545 or 5173 already in use
+- **Cause**: A background Hardhat node or Vite process from a previous session is still listening.
+- **Solution**: Run `Start.bat` Option `[1]`; it will detect the running instance and reuse it without conflict. Alternatively, close the existing node window or terminate the process in Task Manager.
 
-See [`SECURITY.md`](SECURITY.md) for the full threat model.
-
-### Upgrade path
-
-```bash
-# Deploy V2 implementation and upgrade the proxy
-npx hardhat run scripts/upgrade.ts --network sepolia
-```
-
-### Multi-sig governance handoff
-
-```bash
-# Transfer DEFAULT_ADMIN_ROLE to a Gnosis Safe
-$env:SAFE_ADDRESS="0xYourSafeAddress"
-npx hardhat run scripts/transfer-admin-to-safe.ts --network sepolia
-```
+### 3. Frontend Displays "GraphQL query failed" or empty history
+- **Cause**: The Graph Subgraph URL in `VITE_SUBGRAPH_URL` is unset or points to an unindexed deployment.
+- **Solution**: This is normal for local development. The frontend automatically falls back to querying on-chain event logs (`publicClient.getLogs`) via `useBatches.ts`.
 
 ---
 
-## 🧪 Tests
+## 16. Security Considerations & Invariants
 
-63 tests across 8 describe blocks covering:
-
-- Role enforcement (mint, transfer, recall, pause)
-- Full lifecycle state transitions
-- Custom error revert conditions
-- Reentrancy surface
-- Pause/unpause behaviour
-- Event emission (including `BatchTransferred` with timestamp)
-- Upgrade safety invariants
-- Gas profiling (mint ~195k, transfer ~101k, recall ~55k gas)
-
-```bash
-cd smart-contracts
-npx hardhat test
-# Optional: gas report
-REPORT_GAS=true npx hardhat test
-# Optional: coverage
-npx hardhat coverage
-```
+1. **Checks-Effects-Interactions Pattern**:
+   `batchState[tokenId]` and `_custodyCount[tokenId]` are updated in contract storage *before* calling `_safeTransferFrom`, eliminating reentrancy vulnerabilities.
+2. **Access Control Least Privilege**:
+   `DEFAULT_ADMIN_ROLE` controls role assignment. Manufacturers cannot grant themselves admin permissions.
+3. **Emergency Circuit Breaker Resilience**:
+   `recallBatch` does not carry the `whenNotPaused` modifier, ensuring that critical safety recalls can proceed even when all transfers are paused during an incident.
+4. **Proxy Storage Safety**:
+   `SupplyTraceUpgradeable` reserves 45 storage slots (`__gap[45]`). The linear layout is pinned in `.openzeppelin/sepolia.json` to prevent storage corruption during future contract upgrades.
 
 ---
 
-## 🌍 Deployed Contracts (Sepolia)
+## 17. License
 
-| Contract | Address |
-|---|---|
-| **Proxy** (interact with this) | `0x2d6e1979c944DdfCBF34FE1f172DED5e600bEc60` |
-| **Implementation** | `0x64641Ed583aB4aC7AAAa84213522f130F5e4FD64` |
-
----
-
-## 🤝 Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
----
-
-## 📝 License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">Built with ❤️ for transparent, tamper-evident supply chains</p>
+This project is licensed under the MIT License. See [SECURITY.md](SECURITY.md) for security policy and vulnerability reporting instructions.

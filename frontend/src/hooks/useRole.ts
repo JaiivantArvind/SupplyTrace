@@ -1,6 +1,6 @@
 import { useReadContract, useAccount } from 'wagmi'
 import { keccak256, toBytes } from 'viem'
-import { contractAddress, contractAbi } from '@/lib/contract'
+import { contractAddress, contractAbi, isLocalDev } from '@/config/contracts'
 
 const ROLES = {
   MANUFACTURER: keccak256(toBytes('MANUFACTURER_ROLE')) as `0x${string}`,
@@ -19,6 +19,7 @@ function useHasRole(role: `0x${string}`) {
     abi: contractAbi,
     functionName: 'hasRole',
     args: address ? [role, address] : undefined,
+    chainId: isLocalDev ? 31337 : undefined,
     query: { enabled: !!address },
   })
   return { has: data === true, isLoading }

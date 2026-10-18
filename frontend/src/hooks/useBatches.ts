@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { usePublicClient } from 'wagmi'
 import { parseAbiItem } from 'viem'
-import { contractAddress } from '@/lib/contract'
+import { contractAddress, DEPLOYMENT_BLOCK, isLocalDev } from '@/config/contracts'
 
 export type BatchEvent = {
   tokenId: bigint
@@ -18,7 +18,7 @@ export function useBatches() {
   const [batches, setBatches] = useState<BatchEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const publicClient = usePublicClient()
+  const publicClient = usePublicClient({ chainId: isLocalDev ? 31337 : undefined })
 
   useEffect(() => {
     if (!publicClient) return
@@ -26,14 +26,26 @@ export function useBatches() {
     setIsLoading(true)
     setError(null)
 
-    publicClient
-      .getLogs({
-        address: contractAddress,
-        event: BATCH_MINTED_EVENT,
-        fromBlock: 0n,
-        toBlock: 'latest',
-      })
-      .then((logs) => {
+    const fetchLogs = async () => {
+      try {
+        let fromBlock = 0n
+        if (publicClient.chain?.id === 11155111) {
+          try {
+            const currentBlock = await publicClient.getBlockNumber()
+            const maxRange = 990n
+            fromBlock = currentBlock > maxRange ? currentBlock - maxRange : DEPLOYMENT_BLOCK
+          } catch {
+            fromBlock = DEPLOYMENT_BLOCK
+          }
+        }
+
+        const logs = await publicClient.getLogs({
+          address: contractAddress,
+          event: BATCH_MINTED_EVENT,
+          fromBlock,
+          toBlock: 'latest',
+        })
+
         if (cancelled) return
         const events: BatchEvent[] = logs
           .filter((log) => log.args.tokenId !== undefined)
@@ -44,15 +56,15 @@ export function useBatches() {
             blockNumber:  log.blockNumber ?? 0n,
           }))
         setBatches(events)
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (cancelled) return
         setError(err instanceof Error ? err.message : 'Failed to fetch batches')
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setIsLoading(false)
-      })
+      }
+    }
 
+    fetchLogs()
     return () => { cancelled = true }
   }, [publicClient])
 

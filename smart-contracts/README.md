@@ -1,13 +1,25 @@
-# Sample Hardhat Project
+# SupplyTrace Smart Contracts
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+Ethereum smart contracts for the SupplyTrace decentralized provenance platform, featuring UUPS upgradeable contracts, role-based access control, and batch lifecycle tracking.
 
-Try running some of the following tasks:
+## Available Tasks
 
 ```shell
-npx hardhat help
+# Compile contracts
+npx hardhat compile
+
+# Run test suite
 npx hardhat test
-REPORT_GAS=true npx hardhat test
+
+# Run test coverage
+npx hardhat coverage
+
+# Start local hardhat node
 npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.ts
+
+# Deploy locally
+npx hardhat run scripts/deploy.ts --network localhost
+
+# Deploy to Sepolia
+npx hardhat run scripts/deploy.ts --network sepolia
 ```

@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { decodeEventLog, keccak256, toBytes } from 'viem'
 import QRCode from 'qrcode'
-import { contractAddress, contractAbi } from '@/lib/contract'
+import { contractAddress, contractAbi } from '@/config/contracts'
 import { useRole } from '@/hooks/useRole'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,8 +21,6 @@ export default function MintBatch() {
   const [quantity, setQuantity] = useState('100')
   const [mintedTokenId, setMintedTokenId] = useState<bigint | null>(null)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
-
-  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const { data: txHash, writeContract, isPending, error: writeError } = useWriteContract()
   const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({ hash: txHash })
@@ -153,7 +151,6 @@ export default function MintBatch() {
                 QR code for consumer verification:
               </p>
               <img src={qrDataUrl} alt="QR Code" className="rounded border" />
-              <canvas ref={canvasRef} className="hidden" />
               <Button variant="outline" onClick={handleDownload} className="w-full">
                 <Download className="w-4 h-4 mr-2" />
                 Download QR Code

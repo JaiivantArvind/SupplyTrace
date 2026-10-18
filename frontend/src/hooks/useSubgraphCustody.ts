@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { request, gql } from 'graphql-request'
 
-const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL as string | undefined
+const rawSubgraphUrl = import.meta.env.VITE_SUBGRAPH_URL as string | undefined
+const SUBGRAPH_URL = rawSubgraphUrl && !rawSubgraphUrl.includes('your-subgraph-id') ? rawSubgraphUrl : undefined
 
 const CUSTODY_QUERY = gql`
   query CustodyHistory($tokenId: String!) {
@@ -32,7 +33,7 @@ export type SubgraphTransfer = {
   transactionHash: string
 }
 
-type QueryResult = { custodyTransfers: SubgraphTransfer[] }
+type QueryResult = { custodyTransfers?: SubgraphTransfer[] }
 
 export function useSubgraphCustody(tokenId: bigint | null) {
   const [data, setData] = useState<SubgraphTransfer[] | null>(null)
@@ -52,7 +53,7 @@ export function useSubgraphCustody(tokenId: bigint | null) {
 
     request<QueryResult>(SUBGRAPH_URL, CUSTODY_QUERY, { tokenId: tokenId.toString() })
       .then((res) => {
-        if (!cancelled) setData(res.custodyTransfers)
+        if (!cancelled) setData(res?.custodyTransfers ?? [])
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Subgraph query failed')

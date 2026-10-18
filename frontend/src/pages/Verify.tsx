@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useReadContract } from 'wagmi'
 import { Html5Qrcode } from 'html5-qrcode'
-import { contractAddress, contractAbi } from '@/lib/contract'
+import { contractAddress, contractAbi, isLocalDev } from '@/config/contracts'
 import { fetchIPFSMetadata, resolveIPFS, type BatchMetadata } from '@/utils/ipfs'
 import { BatchStateBadge } from '@/components/BatchStateBadge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -120,6 +120,7 @@ function Verify() {
     abi: contractAbi,
     functionName: 'verifyAuthenticity',
     args: tokenIdBigInt !== null ? [tokenIdBigInt] : undefined,
+    chainId: isLocalDev ? 31337 : undefined,
     query: { enabled: tokenIdBigInt !== null },
   })
 

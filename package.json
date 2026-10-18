@@ -1,11 +1,18 @@
 {
   "name": "supplytrace",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "smart-contracts",
-    "subgraph"
-  ],
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build:contracts": "npm run compile --prefix smart-contracts",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:subgraph": "npm run build --prefix subgraph",
+    "codegen:subgraph": "npm run codegen --prefix subgraph",
+    "build": "npm run compile --prefix smart-contracts && npm run build --prefix frontend",
+    "test:contracts": "npm run test --prefix smart-contracts",
+    "test": "npm run test --prefix smart-contracts",
+    "lint:frontend": "npm run lint --prefix frontend",
+    "lint": "npm run lint --prefix frontend"
+  },
   "devDependencies": {
     "@types/node": "^25.3.0"
   }

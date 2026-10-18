@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useBatches } from '@/hooks/useBatches'
 import { useReadContract } from 'wagmi'
-import { contractAddress, contractAbi } from '@/lib/contract'
+import { contractAddress, contractAbi, isLocalDev } from '@/config/contracts'
 import { BatchStateBadge } from '@/components/BatchStateBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ function BatchRow({ tokenId }: { tokenId: bigint }) {
     abi: contractAbi,
     functionName: 'verifyAuthenticity',
     args: [tokenId],
+    chainId: isLocalDev ? 31337 : undefined,
   })
   const batch = data as VerifyResult | undefined
   return (
