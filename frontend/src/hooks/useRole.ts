@@ -50,9 +50,15 @@ export function useRole() {
   const hasOnChainRole = mfr.has || dist.has || retail.has || admin.has || inspector.has
   const hasAnyRole = hasOnChainRole || !!demoPersona
 
+  const demoAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' as `0x${string}`
+  const effectiveAddress = address || (demoPersona ? demoAddress : undefined)
+  const effectiveIsConnected = isConnected || !!demoPersona
+
   return {
-    isConnected,
-    address,
+    isConnected: effectiveIsConnected,
+    address: effectiveAddress,
+    isWalletConnected: isConnected,
+    realAddress: address,
     isManufacturer: mfr.has || demoPersona === 'MANUFACTURER',
     isDistributor:  dist.has || demoPersona === 'DISTRIBUTOR',
     isRetailer:     retail.has || demoPersona === 'RETAILER',

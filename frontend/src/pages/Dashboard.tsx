@@ -24,18 +24,34 @@ export default function Dashboard() {
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const [onboardingTab, setOnboardingTab] = useState<'apply' | 'demo'>('apply')
 
-  if (!isConnected) {
-    return (
-      <div className="relative -mx-4 -mt-8 overflow-hidden">
-        <HeroSection />
-        <TechStackSection />
-      </div>
-    )
-  }
-
   const openOnboarding = (tab: 'apply' | 'demo') => {
     setOnboardingTab(tab)
     setOnboardingOpen(true)
+  }
+
+  if (!isConnected && !demoPersona) {
+    return (
+      <div className="relative -mx-4 -mt-8 overflow-hidden">
+        <HeroSection />
+        <div className="flex justify-center -mt-16 mb-8 relative z-20">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => openOnboarding('demo')}
+            className="rounded-full gap-2 border-primary/50 bg-background/80 backdrop-blur shadow-lg hover:bg-primary/10 text-sm h-11 px-6"
+          >
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            🧪 Try Instant Demo Persona (Sandbox Mode)
+          </Button>
+        </div>
+        <TechStackSection />
+        <RoleOnboardingDialog
+          open={onboardingOpen}
+          onOpenChange={setOnboardingOpen}
+          initialTab={onboardingTab}
+        />
+      </div>
+    )
   }
 
   return (

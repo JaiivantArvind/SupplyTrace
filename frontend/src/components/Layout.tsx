@@ -25,7 +25,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [onboardingOpen, setOnboardingOpen] = React.useState(false)
   const [onboardingTab, setOnboardingTab] = React.useState<'apply' | 'demo'>('apply')
-  const { isConnected, hasOnChainRole } = useRole()
+  const { hasOnChainRole, demoPersona } = useRole()
   const scrolled = useScroll(10)
   const { resolvedTheme, setTheme, theme } = useTheme()
 
@@ -111,7 +111,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Desktop: role + onboarding button + wallet */}
             <div className="hidden sm:flex items-center gap-2">
               <RoleBadge onClick={() => { setOnboardingTab('apply'); setOnboardingOpen(true); }} />
-              {isConnected && !hasOnChainRole && (
+              {!hasOnChainRole && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -119,7 +119,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   className="text-xs h-8 border-dashed border-primary/50 text-primary hover:bg-primary/10 gap-1.5"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                  Claim Role / Demo
+                  {demoPersona ? `Demo: ${demoPersona}` : 'Claim Role / Demo'}
                 </Button>
               )}
               <WalletButton />
