@@ -9,7 +9,9 @@
 
 - **Project Name:** SupplyTrace
 - **Core Purpose:** Decentralized supply chain provenance, custody verification, and batch lifecycle tracking on Ethereum using ERC-1155 tokens, UUPS upgradeable proxies, The Graph indexing, and IPFS metadata.
-- **Current Operational State:** Fully implemented and validated. Contracts compiled and deployed to Sepolia testnet (`0x2d6e...Ec60`), 63/63 unit tests passing, production bundle built and typechecked with 0 errors.
+- **Current Operational State:** Fully implemented, verified end-to-end, and deployed. Contracts deployed to Sepolia testnet (`0x2d6e1979c944DdfCBF34FE1f172DED5e600bEc60`), 63/63 unit tests passing, production bundle built with 0 errors, and deployed live to Vercel.
+- **Repository URL:** `https://github.com/JaiivantArvind/SupplyTrace`
+- **Live Production URL:** `https://supplytrace-mauve.vercel.app`
 - **Application Entry Points:**
   - **Windows Orchestrator:** [`Start.bat`](Start.bat) (Interactive menu & headless CLI runner)
   - **Frontend Web App:** [`frontend/src/main.tsx`](frontend/src/main.tsx) (Wagmi + React Query provider root)
@@ -107,6 +109,7 @@ SupplyTrace/
 │   ├── .npmrc                            # Workspace npm config (legacy-peer-deps=true)
 │   ├── eslint.config.js                  # ESLint 9 configuration (Fast Refresh & React 19 rules)
 │   ├── vite.config.ts                    # Vite 7 build configuration with path aliases (@ -> src)
+│   ├── vercel.json                       # Vercel SPA client-side routing configuration
 │   └── package.json                      # React 19 dependencies & Vite build scripts
 │
 └── subgraph/                             # The Graph Indexing Subsystem

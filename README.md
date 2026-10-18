@@ -163,6 +163,7 @@ SupplyTrace/
 │   │   └── main.tsx                      # Wagmi & QueryClient provider configuration
 │   ├── .env.example                      # Frontend environment template
 │   ├── eslint.config.js                  # ESLint 9 configuration
+│   ├── vercel.json                       # Vercel SPA client-side routing configuration
 │   └── package.json                      # Frontend dependencies and build scripts
 │
 └── subgraph/                         # The Graph Indexing Subsystem
@@ -304,6 +305,7 @@ npm run build --prefix subgraph
 
 | Service | Address / Port | Network / Context | Notes |
 | :--- | :--- | :--- | :--- |
+| **Production Web App** | `https://supplytrace-mauve.vercel.app` | Global / Web | Live deployed on Vercel (SPA rewrites enabled) |
 | **Frontend Web App** | `http://localhost:5173` | Browser | Vite development server |
 | **Local Hardhat RPC** | `http://127.0.0.1:8545` | Chain ID `31337` | Local development chain |
 | **Sepolia Testnet RPC**| `https://rpc.sepolia.org` | Chain ID `11155111` | Ethereum Sepolia testnet |
