@@ -1646,11 +1646,22 @@ Phase 10 represents the final, authoritative audit of the SupplyTrace codebase. 
    - Commits:
      - `e15d13a`: `feat(supplytrace): restructure repository, harden UUPS contracts, implement Windows launcher, and verify end-to-end`
      - `1a43fdf`: `fix(frontend): add vercel.json SPA rewrites for client-side routing`
-2. **Vercel Production Deployment:**
+     - `39ab567`: `feat(onboarding): implement Enterprise Role Applications workflow and Instant Demo Persona Sandbox`
+     - `eab6664`: `feat(ui): add universal instant demo persona access and hero onboarding CTA`
+     - `7482e43`: `feat(database): integrate Supabase PostgreSQL for enterprise role applications and organization profiles`
+     - `9d9cd13`: `docs: document Supabase PostgreSQL architecture, realtime sync, and env keys`
+2. **Supabase Database & Realtime Integration:**
+   - Connected to project `jddicptamwwfqpnhhobl` using Option 3 (strict namespacing & RLS).
+   - Tables created and verified:
+     - `supplytrace_role_applications`: Stores enterprise onboarding requests, registration IDs, status, and on-chain tx hashes.
+     - `supplytrace_organizations`: Stores verified enterprise profiles.
+   - Row Level Security (RLS) enabled on all tables.
+   - Realtime WebSocket channel (`supplytrace_applications_realtime`) synchronizes review queues across all client sessions.
+3. **Vercel Production Deployment:**
    - Project: `supplytrace` (`prj_lncpV27acHr6OqN4fc3yN3acafaZ`) on user account `jaiivantarvind`.
-   - Production Deployment ID: `dpl_CgdsFxb1ipAgCXMJHbKx7jZTiVZh` (State: **READY**).
+   - Production Deployment State: **READY**.
    - Live Production URL: [`https://supplytrace-mauve.vercel.app`](https://supplytrace-mauve.vercel.app).
-   - Live Verification: Verified live in Chrome DevTools against Ethereum Sepolia proxy (`0x2d6e1979c944DdfCBF34FE1f172DED5e600bEc60`). Public verification of Token #1 loaded live on-chain status, manufacturer address (`0xA07EddD5...D217DB3c`), state (`CREATED`), active status (`Active`), and decentralized IPFS metadata URI.
+   - Live Verification: Verified live in Chrome DevTools against Ethereum Sepolia proxy (`0x2d6e1979c944DdfCBF34FE1f172DED5e600bEc60`) and Supabase PostgreSQL.
 
 ---
 

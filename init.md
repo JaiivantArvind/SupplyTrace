@@ -139,6 +139,9 @@ SupplyTrace/
        ├─► Reads/Writes State ──────► [ERC-1967 Proxy: 0x2d6e...Ec60] ──► [Logic: SupplyTraceUpgradeable]
        │                                  │ (Emits Events: BatchMinted, BatchTransferred, BatchRecalled)
        │                                  ▼
+       ├─► Off-Chain Identity & Queue ► [Supabase PostgreSQL (PG 17)] ◄──► [Realtime WebSockets]
+       │                                  │ (Tables: supplytrace_role_applications, supplytrace_organizations)
+       │                                  ▼
        ├─► Queries Historical Graph ──► [The Graph Subgraph / Studio]
        │                                  ▲
        │                                  │ (Syncs from blocks)
@@ -157,6 +160,11 @@ SupplyTrace/
 3. **Decentralized Metadata Resolution:**
    - Batch metadata (JSON documents containing origin coords, certs, descriptions) is stored on IPFS.
    - The client's [`ipfs-gateways.ts`](frontend/src/lib/ipfs-gateways.ts) attempts parallel and sequential resolution across `ipfs.io`, `dweb.link`, `gateway.pinata.cloud`, and `cloudflare-ipfs.com`.
+4. **Off-Chain Identity & Governance Coordination (Supabase):**
+   - Enterprise organizations submit onboarding applications with business details and license numbers, which are stored in Supabase PostgreSQL (`supplytrace_role_applications`).
+   - Admins review the live queue in `/admin` and execute `contract.grantRole(roleHash, applicantAddress)` on Ethereum.
+   - When confirmed on-chain, Supabase updates `status = 'APPROVED'`, records the `tx_hash`, and registers the profile in `supplytrace_organizations`.
+   - Realtime WebSockets (`supplytrace_applications_realtime`) synchronize the admin review queue live across all global client sessions without page refreshes.
 
 ---
 
@@ -257,9 +265,12 @@ npm run build --prefix subgraph              # Compile WASM mapping to build/
 - **[`pages/MintBatch.tsx`](frontend/src/pages/MintBatch.tsx)**: Manufacturer portal; parses `BatchMinted` event from receipt and generates printable QR codes.
 - **[`pages/TransferBatch.tsx`](frontend/src/pages/TransferBatch.tsx)**: Custody transfer portal; validates next valid recipient based on current role.
 - **[`pages/Verify.tsx`](frontend/src/pages/Verify.tsx)**: Public consumer verification route (`/verify/:tokenId`); displays on-chain status, custody count, and parallel IPFS metadata.
-- **[`pages/AdminPanel.tsx`](frontend/src/pages/AdminPanel.tsx)**: Admin dashboard; features role assignment, batch recall, and the Pausable Circuit Breaker toggle.
+- **[`pages/AdminPanel.tsx`](frontend/src/pages/AdminPanel.tsx)**: Admin dashboard; features role assignment, batch recall, Pausable Circuit Breaker, and the live **Enterprise Role Applications Queue** with 1-click on-chain approval actions.
+- **[`components/RoleOnboardingDialog.tsx`](frontend/src/components/RoleOnboardingDialog.tsx)**: Dual-mode gateway supporting Enterprise Role Application submissions and Instant Demo Persona activation.
 - **[`hooks/useBatches.ts`](frontend/src/hooks/useBatches.ts)**: Discovers all minted tokens via `getLogs` using network-aware block offsets (`7949300n` on Sepolia, `0n` on localhost).
-- **[`hooks/useRole.ts`](frontend/src/hooks/useRole.ts)**: Reads `hasRole` for `ADMIN_ROLE`, `MANUFACTURER_ROLE`, `DISTRIBUTOR_ROLE`, `RETAILER_ROLE`.
+- **[`hooks/useRole.ts`](frontend/src/hooks/useRole.ts)**: Reads `hasRole` for `ADMIN_ROLE`, `MANUFACTURER_ROLE`, `DISTRIBUTOR_ROLE`, `RETAILER_ROLE`, and merges active demo sandbox personas.
+- **[`lib/supabase.ts`](frontend/src/lib/supabase.ts)**: Supabase PostgreSQL & Realtime client; provides typed queries for `supplytrace_role_applications` and `supplytrace_organizations`.
+- **[`lib/roleApplications.ts`](frontend/src/lib/roleApplications.ts)**: Central store for enterprise role requests, background Supabase sync, Realtime channel listener, and Hardhat local on-chain role dispenser.
 - **[`lib/ipfs-gateways.ts`](frontend/src/lib/ipfs-gateways.ts)**: Multi-gateway failover resolver with timeout and abort controller.
 
 ---
@@ -306,6 +317,36 @@ type CustodyTransfer @entity(immutable: true) {
   timestamp: BigInt!
   transactionHash: Bytes!
 }
+```
+
+### Supabase PostgreSQL Database Schema
+```sql
+CREATE TABLE public.supplytrace_role_applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_address TEXT NOT NULL,
+  organization_name TEXT NOT NULL,
+  registration_number TEXT NOT NULL,
+  contact_email TEXT NOT NULL,
+  requested_role TEXT NOT NULL CHECK (requested_role IN ('MANUFACTURER', 'DISTRIBUTOR', 'RETAILER', 'INSPECTOR')),
+  scope_description TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  reviewed_by TEXT,
+  tx_hash TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  reviewed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE public.supplytrace_organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_address TEXT UNIQUE NOT NULL,
+  organization_name TEXT NOT NULL,
+  registration_number TEXT NOT NULL,
+  role TEXT NOT NULL,
+  contact_email TEXT,
+  website TEXT,
+  verified BOOLEAN DEFAULT true NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 ```
 
 ---

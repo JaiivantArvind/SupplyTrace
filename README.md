@@ -29,7 +29,7 @@ Global supply chains suffer from widespread vulnerabilities: counterfeit goods, 
 
 ## 2. Architecture Overview
 
-SupplyTrace is structured into three distinct tiers:
+SupplyTrace is structured into four distinct, decoupled tiers:
 
 ```mermaid
 graph TD
@@ -37,8 +37,10 @@ graph TD
         UI["React 19 / Vite UI (:5173)"]
         Wagmi["Wagmi v3 / Viem v2 Provider"]
         IPFS_C["Multi-Gateway IPFS Resolver"]
+        SupaClient["Supabase Realtime Client"]
         UI --> Wagmi
         UI --> IPFS_C
+        UI --> SupaClient
     end
 
     subgraph Blockchain Tier ["Consensus & Execution Tier"]
@@ -48,6 +50,14 @@ graph TD
         Proxy -->|delegates to| Impl
         Wagmi -->|JSON-RPC / Calls| Proxy
         Node -.-> Proxy
+    end
+
+    subgraph Database Tier ["Off-Chain Identity & Coordination Tier (Supabase)"]
+        DB["Supabase PostgreSQL (PG 17)<br/>supplytrace_role_applications<br/>supplytrace_organizations"]
+        Realtime["Supabase Realtime WebSockets"]
+        SupaClient -->|CRUD & Auth| DB
+        DB -->|Instant Push| Realtime
+        Realtime -.->|Live Updates| SupaClient
     end
 
     subgraph Indexing Tier ["Indexing & Storage Tier"]
@@ -77,6 +87,8 @@ graph TD
 | **Multi-Gateway IPFS Fetcher** | Verified | Failover across 4 public gateways (`ipfs.io`, `dweb.link`, `gateway.pinata.cloud`, `cloudflare-ipfs.com`). |
 | **The Graph Indexing** | Verified | Subgraph indexes `BatchMinted`, `BatchTransferred`, `BatchRecalled` into GraphQL entities with RPC log fallback. |
 | **Multi-Sig Governance Handoff**| Verified | Automated script to transfer `ADMIN_ROLE` and `DEFAULT_ADMIN_ROLE` to a Gnosis Safe multi-sig contract. |
+| **Enterprise Onboarding Queue** | Verified | Supabase PostgreSQL queue with Realtime WebSockets; admins approve and grant cryptographic roles on-chain. |
+| **Instant Demo Sandbox** | Verified | 1-click persona activation (`Manufacturer`, `Distributor`, `Retailer`) with local Hardhat on-chain role dispenser. |
 
 ---
 
@@ -163,8 +175,15 @@ SupplyTrace/
 │   │   │   ├── useBatches.ts             # On-chain batch discovery via event logs
 │   │   │   ├── useRole.ts                # Resolves caller's supply chain roles
 │   │   │   └── useSubgraphCustody.ts     # Custody transfer history via GraphQL
+│   │   ├── components/
+│   │   │   ├── Layout.tsx                # App shell, responsive header, and wallet connector
+│   │   │   ├── RoleBadge.tsx             # Interactive role badge & unverified state trigger
+│   │   │   ├── RoleOnboardingDialog.tsx  # Dual-mode modal (Enterprise Application & Demo Sandbox)
+│   │   │   └── WalletButton.tsx          # MetaMask / injected Web3 wallet button
 │   │   ├── lib/
 │   │   │   ├── ipfs-gateways.ts          # Resilient multi-gateway IPFS fetcher
+│   │   │   ├── roleApplications.ts       # Role applications manager, demo state, and local dispenser
+│   │   │   ├── supabase.ts               # Supabase PostgreSQL client & Realtime queries
 │   │   │   └── theme.tsx                 # Light / Dark theme context provider
 │   │   └── main.tsx                      # Wagmi & QueryClient provider configuration
 │   ├── .env.example                      # Frontend environment template
@@ -357,9 +376,57 @@ npm run build --prefix subgraph
 3. The batch is permanently set to `active = false` and transitioned to `CLOSED`. Any subsequent attempts to transfer or trade this token revert immediately with `BatchInactive()`.
 4. If a widespread security issue occurs, the admin can toggle the contract-wide Circuit Breaker (`pause()`), halting all token transfers while preserving emergency recall operations.
 
+### Workflow 5: Enterprise Organization Onboarding & On-Chain Approval
+1. An unverified organization connects their wallet and clicks **"Apply for Role"** or **"Claim Role / Demo"**.
+2. They complete the Enterprise Application Form (Company Name, License/Tax ID, Contact Email, Role Requested, Scope).
+3. The request is submitted to **Supabase PostgreSQL** (`supplytrace_role_applications`) and broadcast via Realtime WebSockets.
+4. An administrator visits `/admin`, views the pending review queue, and clicks **"Approve On-Chain"**.
+5. The Admin's wallet executes `contract.grantRole(roleHash, applicantAddress)`.
+6. Once mined on Ethereum, Supabase updates `status = 'APPROVED'` and records the `tx_hash`. The applicant now holds the cryptographic role on-chain!
+
+### Workflow 6: Instant Demo Sandbox (Zero-Friction Evaluation)
+1. Any visitor or evaluator (even without MetaMask) clicks **"🧪 Try Instant Demo Persona (Sandbox Mode)"** on the landing page.
+2. Select a persona: `Manufacturer`, `Distributor`, or `Retailer`.
+3. The application immediately unlocks with a demo evaluation wallet (`0xf39F...2266`), enabling instant testing of batch minting, QR code generation, and custody handoffs!
+4. On local development (`http://localhost:5173`), the sandbox dialog also provides a **Localhost On-Chain Role Dispenser** that executes real transactions via the local Hardhat node.
+
 ---
 
 ## 13. Data Models & Storage Layout
+
+### Supabase Database Schema (PostgreSQL 17)
+Off-chain enterprise applications and verified organization directories are managed via Supabase with Row Level Security:
+
+```sql
+-- Enterprise Role Applications
+CREATE TABLE supplytrace_role_applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_address TEXT NOT NULL,
+  organization_name TEXT NOT NULL,
+  registration_number TEXT NOT NULL,
+  contact_email TEXT NOT NULL,
+  requested_role TEXT NOT NULL CHECK (requested_role IN ('MANUFACTURER', 'DISTRIBUTOR', 'RETAILER', 'INSPECTOR')),
+  scope_description TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  reviewed_by TEXT,
+  tx_hash TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  reviewed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Verified Organizations
+CREATE TABLE supplytrace_organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_address TEXT UNIQUE NOT NULL,
+  organization_name TEXT NOT NULL,
+  registration_number TEXT NOT NULL,
+  role TEXT NOT NULL,
+  contact_email TEXT,
+  website TEXT,
+  verified BOOLEAN DEFAULT true NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+```
 
 ### Smart Contract Storage Layout (`SupplyTraceUpgradeable.sol`)
 The contract inherits OpenZeppelin Upgradeable contracts using ERC-7201 namespaced storage. The custom state variables occupy linear slots 0 through 4:
