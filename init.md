@@ -38,6 +38,7 @@
 | **Styling & Components**| Tailwind CSS / Radix UI | `^3.4.10` / Radix primitives | [`frontend/src/index.css`](frontend/src/index.css) |
 | **Indexing Subsystem** | The Graph / AssemblyScript | CLI `^0.98.1` / TS `^0.35.1` | [`subgraph/subgraph.yaml`](subgraph/subgraph.yaml) |
 | **Decentralized Storage**| IPFS | Multi-gateway failover | [`frontend/src/lib/ipfs-gateways.ts`](frontend/src/lib/ipfs-gateways.ts) |
+| **Enterprise Database** | Supabase (PostgreSQL + Realtime)| `^2.99.1` (JS Client) / PG 17 | [`frontend/src/lib/supabase.ts`](frontend/src/lib/supabase.ts) |
 
 ---
 
@@ -99,9 +100,13 @@ SupplyTrace/
 │   │   │   └── useSubgraphCustody.ts     # GraphQL custody history fetcher with RPC fallback
 │   │   ├── lib/
 │   │   │   ├── ipfs-gateways.ts          # Resilient multi-gateway IPFS fetcher
+│   │   │   ├── roleApplications.ts       # Role application manager, demo persona state, and local dispenser
+│   │   │   ├── supabase.ts               # Supabase client (PostgreSQL & Realtime for role applications)
 │   │   │   └── theme.tsx                 # ThemeProvider and useTheme context
 │   │   ├── components/
 │   │   │   ├── Layout.tsx                # App shell, responsive sidebar & wallet header
+│   │   │   ├── RoleBadge.tsx             # Interactive role badge & unverified state trigger
+│   │   │   ├── RoleOnboardingDialog.tsx  # Dual-mode modal (Enterprise Application & Demo Sandbox)
 │   │   │   ├── WalletButton.tsx          # MetaMask / injected connector button
 │   │   │   └── ui/                       # shadcn/ui primitives (badge, button, card, dialog, etc.)
 │   │   └── main.tsx                      # App entry point, WagmiConfig & QueryClientProvider

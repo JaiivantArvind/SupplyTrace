@@ -100,6 +100,12 @@ graph TD
 - **Runtime**: The Graph Protocol (Spec: `0.0.4`, Mapping API: `0.0.6`)
 - **Compiler**: `@graphprotocol/graph-cli` `0.98.1`, `@graphprotocol/graph-ts` `0.35.1`
 
+### Database & Realtime (Off-Chain Coordination Tier)
+- **Platform**: Supabase (PostgreSQL 17 + Realtime WebSockets)
+- **Client**: `@supabase/supabase-js` `^2.99.1`
+- **Tables**: `supplytrace_role_applications` (enterprise onboarding queue), `supplytrace_organizations` (verified profiles)
+- **Security**: Row Level Security (RLS) enabled on all tables
+
 ---
 
 ## 5. Repository Directory Tree
@@ -231,6 +237,8 @@ copy frontend\.env.example frontend\.env
 | `VITE_CONTRACT_ADDRESS`| Frontend | Target SupplyTrace proxy address | `0x2d6e1979c944DdfCBF34FE1f172DED5e600bEc60` |
 | `VITE_SUBGRAPH_URL` | Frontend | The Graph GraphQL query URL | Optional (falls back to RPC logs) |
 | `PINATA_JWT` | Frontend | IPFS pinning service token | Optional (demo fallback active) |
+| `VITE_SUPABASE_URL` | Frontend | Supabase Project URL | `https://your-project.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY`| Frontend | Supabase public Anon API key | Supabase public JWT token |
 
 > 🔒 **Security Notice**: Never commit `.env` files or private keys. The root `.gitignore` excludes all `.env` files across all directories.
 
