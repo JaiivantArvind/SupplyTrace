@@ -15,7 +15,7 @@ export interface DbRoleApplication {
   organization_name: string
   registration_number: string
   contact_email: string
-  requested_role: 'MANUFACTURER' | 'DISTRIBUTOR' | 'RETAILER' | 'INSPECTOR'
+  requested_role: 'MANUFACTURER' | 'DISTRIBUTOR' | 'RETAILER' | 'INSPECTOR' | 'ADMIN'
   scope_description: string | null
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
   reviewed_by: string | null
@@ -61,7 +61,7 @@ export async function insertDbRoleApplication(app: {
   organization_name: string
   registration_number: string
   contact_email: string
-  requested_role: 'MANUFACTURER' | 'DISTRIBUTOR' | 'RETAILER' | 'INSPECTOR'
+  requested_role: 'MANUFACTURER' | 'DISTRIBUTOR' | 'RETAILER' | 'INSPECTOR' | 'ADMIN'
   scope_description?: string
 }): Promise<DbRoleApplication | null> {
   try {

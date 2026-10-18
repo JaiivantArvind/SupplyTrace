@@ -14,15 +14,14 @@ export const ROLES = {
 
 export type RoleKey = keyof typeof ROLES
 
-function useHasRole(role: `0x${string}`) {
-  const { address } = useAccount()
+function useHasRole(role: `0x${string}`, targetAddress?: `0x${string}`) {
   const { data, isLoading } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'hasRole',
-    args: address ? [role, address] : undefined,
+    args: targetAddress ? [role, targetAddress] : undefined,
     chainId: isLocalDev ? 31337 : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!targetAddress },
   })
   return { has: data === true, isLoading }
 }
@@ -41,18 +40,18 @@ export function useRole() {
     return () => window.removeEventListener('supplytrace:demo-persona-updated', handleUpdate)
   }, [])
 
-  const mfr      = useHasRole(ROLES.MANUFACTURER)
-  const dist     = useHasRole(ROLES.DISTRIBUTOR)
-  const retail   = useHasRole(ROLES.RETAILER)
-  const admin    = useHasRole(ROLES.ADMIN)
-  const inspector = useHasRole(ROLES.INSPECTOR)
-
-  const hasOnChainRole = mfr.has || dist.has || retail.has || admin.has || inspector.has
-  const hasAnyRole = hasOnChainRole || !!demoPersona
-
   const demoAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' as `0x${string}`
   const effectiveAddress = address || (demoPersona ? demoAddress : undefined)
   const effectiveIsConnected = isConnected || !!demoPersona
+
+  const mfr       = useHasRole(ROLES.MANUFACTURER, effectiveAddress)
+  const dist      = useHasRole(ROLES.DISTRIBUTOR, effectiveAddress)
+  const retail    = useHasRole(ROLES.RETAILER, effectiveAddress)
+  const admin     = useHasRole(ROLES.ADMIN, effectiveAddress)
+  const inspector = useHasRole(ROLES.INSPECTOR, effectiveAddress)
+
+  const hasOnChainRole = mfr.has || dist.has || retail.has || admin.has || inspector.has
+  const hasAnyRole = hasOnChainRole || !!demoPersona
 
   return {
     isConnected: effectiveIsConnected,
@@ -62,7 +61,7 @@ export function useRole() {
     isManufacturer: mfr.has || demoPersona === 'MANUFACTURER',
     isDistributor:  dist.has || demoPersona === 'DISTRIBUTOR',
     isRetailer:     retail.has || demoPersona === 'RETAILER',
-    isAdmin:        admin.has,
+    isAdmin:        admin.has || demoPersona === 'ADMIN',
     isInspector:    inspector.has || demoPersona === 'INSPECTOR',
     hasOnChainRole,
     hasAnyRole,

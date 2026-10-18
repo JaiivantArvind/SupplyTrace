@@ -36,6 +36,7 @@ import {
   Sparkles,
   AlertCircle,
   ShieldCheck,
+  ShieldAlert,
   PackagePlus,
   ArrowRightLeft,
   Store,
@@ -52,8 +53,10 @@ export function RoleOnboardingDialog({
   onOpenChange,
   initialTab = 'apply',
 }: RoleOnboardingDialogProps) {
-  const { address, isConnected } = useAccount()
-  const { isManufacturer, isDistributor, isRetailer, demoPersona, setDemoPersona } = useRole()
+  const { address: accountAddress, isConnected: isAccountConnected } = useAccount()
+  const { isManufacturer, isDistributor, isRetailer, demoPersona, setDemoPersona, address: roleAddress } = useRole()
+  const address = accountAddress || roleAddress
+  const isConnected = isAccountConnected || !!roleAddress
 
   const [activeTab, setActiveTab] = useState<'apply' | 'demo'>(initialTab)
 
@@ -305,10 +308,20 @@ export function RoleOnboardingDialog({
                           <SelectItem value="DISTRIBUTOR">Distributor (Wholesale custody transit)</SelectItem>
                           <SelectItem value="RETAILER">Retailer (Customer points of sale)</SelectItem>
                           <SelectItem value="INSPECTOR">Inspector (Quality & compliance audits)</SelectItem>
+                          <SelectItem value="ADMIN">Administrator (Governance & System Authority)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
+
+                  {role === 'ADMIN' && (
+                    <Alert className="bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400">
+                      <ShieldAlert className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        <strong>Governance Requirement:</strong> Administrator applications undergo strict vetting. Only existing on-chain Administrators can approve this request. Once approved, you are granted cryptographic <code className="font-mono">ADMIN_ROLE</code> to manage roles, pause/resume the contract, and trigger emergency recalls.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   <div className="space-y-1.5">
                     <Label htmlFor="scope">Supply Chain Scope & Description</Label>
@@ -446,6 +459,15 @@ export function RoleOnboardingDialog({
                       className="text-xs h-8"
                     >
                       {localDispensing ? 'Dispensing…' : 'Grant On-Chain Distributor'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={localDispensing}
+                      onClick={() => handleClaimLocalRole('ADMIN')}
+                      className="text-xs h-8 border-purple-500/40 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                    >
+                      {localDispensing ? 'Dispensing…' : 'Grant On-Chain Admin'}
                     </Button>
                   </div>
 

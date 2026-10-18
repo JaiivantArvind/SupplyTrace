@@ -378,17 +378,17 @@ npm run build --prefix subgraph
 
 ### Workflow 5: Enterprise Organization Onboarding & On-Chain Approval
 1. An unverified organization connects their wallet and clicks **"Apply for Role"** or **"Claim Role / Demo"**.
-2. They complete the Enterprise Application Form (Company Name, License/Tax ID, Contact Email, Role Requested, Scope).
+2. They complete the Enterprise Application Form (Company Name, License/Tax ID, Contact Email, Role Requested, Scope). Applicants can apply for operational roles (`MANUFACTURER`, `DISTRIBUTOR`, `RETAILER`, `INSPECTOR`) or governance oversight (`ADMIN`).
 3. The request is submitted to **Supabase PostgreSQL** (`supplytrace_role_applications`) and broadcast via Realtime WebSockets.
-4. An administrator visits `/admin`, views the pending review queue, and clicks **"Approve On-Chain"**.
-5. The Admin's wallet executes `contract.grantRole(roleHash, applicantAddress)`.
-6. Once mined on Ethereum, Supabase updates `status = 'APPROVED'` and records the `tx_hash`. The applicant now holds the cryptographic role on-chain!
+4. An administrator (holding cryptographic `ADMIN_ROLE` on-chain) visits `/admin`, views the pending review queue, and clicks **"Approve On-Chain"**. Only authenticated administrators have permission to view or approve applications.
+5. The Admin's wallet executes `contract.grantRole(roleHash, applicantAddress)` on Ethereum.
+6. Once mined on Ethereum, Supabase updates `status = 'APPROVED'`, saves the reviewer address and `tx_hash`, and registers the profile in `supplytrace_organizations`. The applicant now holds the cryptographic role on-chain!
 
 ### Workflow 6: Instant Demo Sandbox (Zero-Friction Evaluation)
 1. Any visitor or evaluator (even without MetaMask) clicks **"🧪 Try Instant Demo Persona (Sandbox Mode)"** on the landing page.
 2. Select a persona: `Manufacturer`, `Distributor`, or `Retailer`.
 3. The application immediately unlocks with a demo evaluation wallet (`0xf39F...2266`), enabling instant testing of batch minting, QR code generation, and custody handoffs!
-4. On local development (`http://localhost:5173`), the sandbox dialog also provides a **Localhost On-Chain Role Dispenser** that executes real transactions via the local Hardhat node.
+4. On local development (`http://localhost:5173`), the sandbox dialog also provides a **Localhost On-Chain Role Dispenser** that executes real transactions via the local Hardhat node (including dispensing `ADMIN_ROLE`).
 
 ---
 
@@ -405,7 +405,7 @@ CREATE TABLE supplytrace_role_applications (
   organization_name TEXT NOT NULL,
   registration_number TEXT NOT NULL,
   contact_email TEXT NOT NULL,
-  requested_role TEXT NOT NULL CHECK (requested_role IN ('MANUFACTURER', 'DISTRIBUTOR', 'RETAILER', 'INSPECTOR')),
+  requested_role TEXT NOT NULL CHECK (requested_role IN ('MANUFACTURER', 'DISTRIBUTOR', 'RETAILER', 'INSPECTOR', 'ADMIN')),
   scope_description TEXT,
   status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
   reviewed_by TEXT,

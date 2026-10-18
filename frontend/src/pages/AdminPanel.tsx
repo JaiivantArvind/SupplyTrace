@@ -45,7 +45,7 @@ const ROLE_OPTIONS = [
 ]
 
 export default function AdminPanel() {
-  const { isAdmin, isConnected } = useRole()
+  const { isAdmin, isConnected, address: adminAddress } = useRole()
 
   // Circuit breaker state
   const { data: isPaused, refetch: refetchPaused } = useReadContract({
@@ -89,10 +89,10 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (roleSuccess && approvingAppId) {
-      updateApplicationStatus(approvingAppId, 'APPROVED', roleHash)
+      updateApplicationStatus(approvingAppId, 'APPROVED', roleHash, adminAddress)
       setApprovingAppId(null)
     }
-  }, [roleSuccess, approvingAppId, roleHash])
+  }, [roleSuccess, approvingAppId, roleHash, adminAddress])
 
   const handleTogglePause = () => {
     writePause({
@@ -138,7 +138,7 @@ export default function AdminPanel() {
   }
 
   const handleRejectApplication = (appId: string) => {
-    updateApplicationStatus(appId, 'REJECTED')
+    updateApplicationStatus(appId, 'REJECTED', undefined, adminAddress)
   }
 
   if (!isConnected) {
@@ -226,8 +226,15 @@ export default function AdminPanel() {
                         {app.address.slice(0, 6)}…{app.address.slice(-4)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {app.role}
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${
+                            app.role === 'ADMIN'
+                              ? 'border-purple-500/50 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold'
+                              : ''
+                          }`}
+                        >
+                          {app.role === 'ADMIN' ? 'ADMIN (GOV)' : app.role}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">

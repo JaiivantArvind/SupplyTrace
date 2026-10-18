@@ -161,9 +161,9 @@ SupplyTrace/
    - Batch metadata (JSON documents containing origin coords, certs, descriptions) is stored on IPFS.
    - The client's [`ipfs-gateways.ts`](frontend/src/lib/ipfs-gateways.ts) attempts parallel and sequential resolution across `ipfs.io`, `dweb.link`, `gateway.pinata.cloud`, and `cloudflare-ipfs.com`.
 4. **Off-Chain Identity & Governance Coordination (Supabase):**
-   - Enterprise organizations submit onboarding applications with business details and license numbers, which are stored in Supabase PostgreSQL (`supplytrace_role_applications`).
-   - Admins review the live queue in `/admin` and execute `contract.grantRole(roleHash, applicantAddress)` on Ethereum.
-   - When confirmed on-chain, Supabase updates `status = 'APPROVED'`, records the `tx_hash`, and registers the profile in `supplytrace_organizations`.
+   - Enterprise organizations submit onboarding applications with business details and license numbers, which are stored in Supabase PostgreSQL (`supplytrace_role_applications`). Participants can apply for operational roles (`MANUFACTURER`, `DISTRIBUTOR`, `RETAILER`, `INSPECTOR`) or governance (`ADMIN`).
+   - Only wallets holding cryptographic `ADMIN_ROLE` on-chain can access `/admin`, view the application queue, and execute `contract.grantRole(roleHash, applicantAddress)` on Ethereum.
+   - When confirmed on-chain, Supabase updates `status = 'APPROVED'`, records the `tx_hash` and `reviewed_by` admin address, and registers the profile in `supplytrace_organizations`.
    - Realtime WebSockets (`supplytrace_applications_realtime`) synchronize the admin review queue live across all global client sessions without page refreshes.
 
 ---
@@ -327,7 +327,7 @@ CREATE TABLE public.supplytrace_role_applications (
   organization_name TEXT NOT NULL,
   registration_number TEXT NOT NULL,
   contact_email TEXT NOT NULL,
-  requested_role TEXT NOT NULL CHECK (requested_role IN ('MANUFACTURER', 'DISTRIBUTOR', 'RETAILER', 'INSPECTOR')),
+  requested_role TEXT NOT NULL CHECK (requested_role IN ('MANUFACTURER', 'DISTRIBUTOR', 'RETAILER', 'INSPECTOR', 'ADMIN')),
   scope_description TEXT,
   status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
   reviewed_by TEXT,

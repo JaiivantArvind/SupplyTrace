@@ -11,7 +11,7 @@ import {
   type DbRoleApplication,
 } from '@/lib/supabase'
 
-export type SupplyChainRole = 'MANUFACTURER' | 'DISTRIBUTOR' | 'RETAILER' | 'INSPECTOR'
+export type SupplyChainRole = 'MANUFACTURER' | 'DISTRIBUTOR' | 'RETAILER' | 'INSPECTOR' | 'ADMIN'
 
 export interface RoleApplication {
   id: string
@@ -32,6 +32,7 @@ export const ROLE_HASHES: Record<SupplyChainRole, `0x${string}`> = {
   DISTRIBUTOR:  keccak256(toBytes('DISTRIBUTOR_ROLE')),
   RETAILER:     keccak256(toBytes('RETAILER_ROLE')),
   INSPECTOR:    keccak256(toBytes('INSPECTOR_ROLE')),
+  ADMIN:        keccak256(toBytes('ADMIN_ROLE')),
 }
 
 const STORAGE_KEY = 'supplytrace_role_applications'

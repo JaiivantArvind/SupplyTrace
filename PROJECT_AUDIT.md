@@ -1650,13 +1650,15 @@ Phase 10 represents the final, authoritative audit of the SupplyTrace codebase. 
      - `eab6664`: `feat(ui): add universal instant demo persona access and hero onboarding CTA`
      - `7482e43`: `feat(database): integrate Supabase PostgreSQL for enterprise role applications and organization profiles`
      - `9d9cd13`: `docs: document Supabase PostgreSQL architecture, realtime sync, and env keys`
+     - `b48f214`: `docs: sync readme, init, and audit with supabase database tier and onboarding workflows`
 2. **Supabase Database & Realtime Integration:**
    - Connected to project `jddicptamwwfqpnhhobl` using Option 3 (strict namespacing & RLS).
    - Tables created and verified:
-     - `supplytrace_role_applications`: Stores enterprise onboarding requests, registration IDs, status, and on-chain tx hashes.
+     - `supplytrace_role_applications`: Stores enterprise onboarding requests, registration IDs, status, and on-chain tx hashes. Check constraint updated to support `('MANUFACTURER', 'DISTRIBUTOR', 'RETAILER', 'INSPECTOR', 'ADMIN')`.
      - `supplytrace_organizations`: Stores verified enterprise profiles.
    - Row Level Security (RLS) enabled on all tables.
    - Realtime WebSocket channel (`supplytrace_applications_realtime`) synchronizes review queues across all client sessions.
+   - Admin Approval Enforcement: Strictly guarded on both UI layer (`isAdmin` check) and EVM consensus layer (`AccessControlUpgradeable.grantRole` reverts for non-admins).
 3. **Vercel Production Deployment:**
    - Project: `supplytrace` (`prj_lncpV27acHr6OqN4fc3yN3acafaZ`) on user account `jaiivantarvind`.
    - Production Deployment State: **READY**.
